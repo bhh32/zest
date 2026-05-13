@@ -48,6 +48,7 @@
 extern crate alloc;
 
 pub mod button;
+pub mod core;
 pub mod column;
 pub mod container;
 pub mod element;

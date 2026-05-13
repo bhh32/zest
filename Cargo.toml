@@ -1,5 +1,5 @@
 [package]
-name = "embedded-widgets"
+name = "zest"
 version = "0.1.0"
 edition = "2024"
 description = "Touch-driven UI widgets for embedded-graphics displays"

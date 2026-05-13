@@ -1,3 +1,10 @@
+pub mod button;
+pub mod column;
+pub mod container;
+pub mod grid;
+pub mod keyboard;
+pub mod row;
+
 use crate::{Renderer, Theme, renderer::RenderError};
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
 

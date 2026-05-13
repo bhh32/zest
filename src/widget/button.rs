@@ -117,3 +117,21 @@ impl<'a, C: PixelColor, M: Clone> Widget<'a, C, M> for Button<'a, C, M> {
         Ok(())
     }
 }
+
+pub fn<'a, C, M> standard(rect: Rectangle, label: impl Into<String>) -> Button<'a, C, M>
+where
+    C: PixelColor + 'a,
+    M: Clone + 'a
+{
+    Button::new(rect, label)
+}
+
+pub fn<'a, C, M> destructive(rect: Rectangle, label: impl Into<String>) -> Button<'a, C, M>
+where
+    C: PixelColor,
+    M: Clone,
+{
+    Button::new(rect, label)
+        .override_style(Rgb565::CSS_TOMATO)
+
+}
