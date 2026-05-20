@@ -1,0 +1,16 @@
+[package]
+name = "zest-theme"
+description = "Theme types for zest, following libcosmic's grouped Container/Component/Palette structure."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+embedded-graphics.workspace = true
+embedded-graphics-core.workspace = true
+
+[lints]
+workspace = true

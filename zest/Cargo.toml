@@ -1,0 +1,35 @@
+[package]
+name = "zest"
+description = "Retained-mode GUI framework for embedded touchscreen MCUs. Re-exports zest-core, zest-theme, and zest-widget; optional simulator default platform."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+embedded-graphics.workspace = true
+zest-core.workspace = true
+zest-theme.workspace = true
+zest-widget.workspace = true
+zest-simulator = { workspace = true, optional = true }
+
+# `net` feature uses embassy-time to yield between worker-thread polls.
+embassy-time = { version = "0.4", optional = true }
+reqwest = { version = "0.13.3", default-features = false, features = ["blocking", "json", "rustls", "http2"], optional = true }
+serde = { version = "1.0.228", default-features = false, optional = true }
+
+[features]
+# When enabled, `zest::run(app)` uses zest-simulator as the default
+# platform. Examples and desktop development enable this; embedded
+# applications do not (avoiding SDL2 in their dep tree).
+default = []
+simulator = ["dep:zest-simulator"]
+# Desktop async-HTTP shim. Hides std::thread + mpsc behind an async fn
+# so example code stays runtime-agnostic. On hardware, swap to
+# `embassy-net` + `reqwless` instead — same async signature.
+net = ["dep:embassy-time", "dep:reqwest", "dep:serde", "embassy-time/std", "embassy-time/generic-queue-8"]
+
+[lints]
+workspace = true

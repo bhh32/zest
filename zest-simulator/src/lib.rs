@@ -1,0 +1,461 @@
+//! Desktop simulator [`Platform`] for `zest`.
+//!
+//! Shapes are rendered with anti-aliasing via `tiny-skia` into an
+//! RGBA pixmap, then converted to RGB565 for the SDL2-backed
+//! `embedded-graphics-simulator` window. Text stays pixel-perfect
+//! (bitmap `MonoFont`) to match the on-device look.
+
+use embassy_time::{Duration, Timer};
+use embedded_graphics::{
+    Pixel,
+    mono_font::{MonoFont, MonoTextStyle},
+    pixelcolor::Rgb565,
+    prelude::*,
+    primitives::Rectangle,
+    text::{Alignment, Text},
+};
+use embedded_graphics_simulator::{
+    OutputSettings, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
+    sdl2::MouseButton,
+};
+use std::{convert::Infallible, vec::Vec};
+use tiny_skia::{
+    Color as SkColor, FillRule, Mask, Paint, PathBuilder, Pixmap, Rect as SkRect, Stroke,
+    Transform,
+};
+use zest_core::{InputEvent, Platform, RenderError, Renderer, TouchEvent, TouchPhase};
+
+/// Default display width — matches the CYD R3 panel.
+pub const DEFAULT_WIDTH: u32 = 320;
+/// Default display height — matches the CYD R3 panel.
+pub const DEFAULT_HEIGHT: u32 = 240;
+/// Default window scaling factor.
+pub const DEFAULT_SCALE: u32 = 2;
+/// Default per-pixel gap. Anti-aliased rendering supplies its own
+/// smoothness, so the default is `0` (sharp upscale).
+pub const DEFAULT_PIXEL_SPACING: u32 = 0;
+/// Default event-poll interval in milliseconds (≈ 60 fps).
+pub const DEFAULT_POLL_MS: u64 = 16;
+
+/// Configurable builder for [`SimulatorPlatform`].
+pub struct SimulatorPlatformBuilder {
+    title: String,
+    size: Size,
+    scale: u32,
+    pixel_spacing: u32,
+    poll_ms: u64,
+}
+
+impl SimulatorPlatformBuilder {
+    /// New builder with the given window title; defaults otherwise.
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            size: Size::new(DEFAULT_WIDTH, DEFAULT_HEIGHT),
+            scale: DEFAULT_SCALE,
+            pixel_spacing: DEFAULT_PIXEL_SPACING,
+            poll_ms: DEFAULT_POLL_MS,
+        }
+    }
+
+    /// Override display size (default: 320×240).
+    #[must_use]
+    pub fn size(mut self, size: Size) -> Self {
+        self.size = size;
+        self
+    }
+
+    /// Override window scale (default: 2).
+    #[must_use]
+    pub fn scale(mut self, scale: u32) -> Self {
+        self.scale = scale;
+        self
+    }
+
+    /// Override per-pixel gap (default: 0).
+    ///
+    /// `1` mimics a real LCD's pixel grid by drawing each emulated
+    /// pixel as a `scale × scale` block followed by a 1-px gap.
+    /// Combined with anti-aliased shapes this can look over-busy;
+    /// keep it `0` for a flat upscale.
+    #[must_use]
+    pub fn pixel_spacing(mut self, pixel_spacing: u32) -> Self {
+        self.pixel_spacing = pixel_spacing;
+        self
+    }
+
+    /// Override SDL event-poll interval in ms (default: 16 = 60 fps).
+    #[must_use]
+    pub fn poll_ms(mut self, poll_ms: u64) -> Self {
+        self.poll_ms = poll_ms;
+        self
+    }
+
+    /// Build.
+    #[must_use]
+    pub fn build(self) -> SimulatorPlatform {
+        let settings: OutputSettings = OutputSettingsBuilder::new()
+            .scale(self.scale)
+            .pixel_spacing(self.pixel_spacing)
+            .build();
+        let pixmap = Pixmap::new(self.size.width, self.size.height).expect("non-zero pixmap size");
+        SimulatorPlatform {
+            display: SimulatorDisplay::new(self.size),
+            window: Window::new(&self.title, &settings),
+            pixmap,
+            size: self.size,
+            mouse_down: false,
+            poll_ms: self.poll_ms,
+        }
+    }
+}
+
+/// `Platform` implementation backed by SDL2.
+pub struct SimulatorPlatform {
+    display: SimulatorDisplay<Rgb565>,
+    window: Window,
+    pixmap: Pixmap,
+    size: Size,
+    mouse_down: bool,
+    poll_ms: u64,
+}
+
+impl SimulatorPlatform {
+    /// Convenience: default 320×240 RGB565 at 2× scale, 60 fps polling.
+    #[must_use]
+    pub fn new(title: impl Into<String>) -> Self {
+        SimulatorPlatformBuilder::new(title).build()
+    }
+
+    /// Builder for custom configuration.
+    #[must_use]
+    pub fn builder(title: impl Into<String>) -> SimulatorPlatformBuilder {
+        SimulatorPlatformBuilder::new(title)
+    }
+}
+
+impl Platform for SimulatorPlatform {
+    type Color = Rgb565;
+    type Error = Infallible;
+
+    async fn next_event(&mut self) -> Option<InputEvent> {
+        loop {
+            for sim_event in self.window.events() {
+                match sim_event {
+                    SimulatorEvent::Quit => return None,
+                    SimulatorEvent::MouseButtonDown {
+                        mouse_btn: MouseButton::Left,
+                        point,
+                    } => {
+                        self.mouse_down = true;
+                        return Some(InputEvent::Touch(TouchEvent {
+                            phase: TouchPhase::Down,
+                            point,
+                        }));
+                    }
+                    SimulatorEvent::MouseButtonUp {
+                        mouse_btn: MouseButton::Left,
+                        point,
+                    } => {
+                        self.mouse_down = false;
+                        return Some(InputEvent::Touch(TouchEvent {
+                            phase: TouchPhase::Up,
+                            point,
+                        }));
+                    }
+                    SimulatorEvent::MouseMove { point } if self.mouse_down => {
+                        return Some(InputEvent::Touch(TouchEvent {
+                            phase: TouchPhase::Moved,
+                            point,
+                        }));
+                    }
+                    _ => {}
+                }
+            }
+            Timer::after(Duration::from_millis(self.poll_ms)).await;
+        }
+    }
+
+    async fn render_with<F>(&mut self, draw: F) -> Result<(), Self::Error>
+    where
+        F: FnOnce(&mut dyn Renderer<Self::Color>) -> Result<(), RenderError>,
+    {
+        // Reset pixmap to opaque black so AA edges blend against a
+        // defined background; the runtime will paint the theme bg first.
+        self.pixmap.fill(SkColor::BLACK);
+        {
+            let mut renderer = TinySkiaRenderer {
+                pixmap: &mut self.pixmap,
+                clip_mask: None,
+                clip_rect: None,
+                clip_stack: Vec::new(),
+            };
+            let _ = draw(&mut renderer);
+        }
+
+        // RGBA8 → Rgb565 blit into the SDL framebuffer.
+        let area = Rectangle::new(Point::zero(), self.size);
+        let data = self.pixmap.data();
+        let colors = (0..(self.size.width * self.size.height) as usize).map(|i| {
+            let off = i * 4;
+            rgba8_to_rgb565(data[off], data[off + 1], data[off + 2])
+        });
+        let _ = self.display.fill_contiguous(&area, colors);
+
+        self.window.update(&self.display);
+        Ok(())
+    }
+
+    fn viewport(&self) -> Size {
+        self.size
+    }
+}
+
+struct TinySkiaRenderer<'p> {
+    pixmap: &'p mut Pixmap,
+    clip_mask: Option<Mask>,
+    clip_rect: Option<Rectangle>,
+    clip_stack: Vec<(Option<Mask>, Option<Rectangle>)>,
+}
+
+impl<'p> Renderer<Rgb565> for TinySkiaRenderer<'p> {
+    fn fill_rect(&mut self, rect: Rectangle, color: Rgb565) -> Result<(), RenderError> {
+        let Some(sk_rect) = SkRect::from_xywh(
+            rect.top_left.x as f32,
+            rect.top_left.y as f32,
+            rect.size.width as f32,
+            rect.size.height as f32,
+        ) else {
+            return Ok(());
+        };
+        let mut paint = Paint::default();
+        paint.set_color(rgb565_to_skia(color));
+        // Snap to pixel grid; blocks of solid color don't benefit from AA.
+        paint.anti_alias = false;
+        self.pixmap
+            .fill_rect(sk_rect, &paint, Transform::identity(), self.clip_mask.as_ref());
+        Ok(())
+    }
+
+    fn stroke_rect(&mut self, rect: Rectangle, color: Rgb565) -> Result<(), RenderError> {
+        let Some(sk_rect) = SkRect::from_xywh(
+            rect.top_left.x as f32 + 0.5,
+            rect.top_left.y as f32 + 0.5,
+            rect.size.width.saturating_sub(1) as f32,
+            rect.size.height.saturating_sub(1) as f32,
+        ) else {
+            return Ok(());
+        };
+        let path = PathBuilder::from_rect(sk_rect);
+        let mut paint = Paint::default();
+        paint.set_color(rgb565_to_skia(color));
+        paint.anti_alias = false;
+        let mut stroke = Stroke::default();
+        stroke.width = 1.0;
+        self.pixmap
+            .stroke_path(&path, &paint, &stroke, Transform::identity(), self.clip_mask.as_ref());
+        Ok(())
+    }
+
+    fn fill_circle(
+        &mut self,
+        center: Point,
+        radius: u32,
+        color: Rgb565,
+    ) -> Result<(), RenderError> {
+        if radius == 0 {
+            return Ok(());
+        }
+        let mut pb = PathBuilder::new();
+        pb.push_circle(center.x as f32 + 0.5, center.y as f32 + 0.5, radius as f32);
+        let Some(path) = pb.finish() else {
+            return Ok(());
+        };
+        let mut paint = Paint::default();
+        paint.set_color(rgb565_to_skia(color));
+        paint.anti_alias = true;
+        self.pixmap.fill_path(
+            &path,
+            &paint,
+            FillRule::Winding,
+            Transform::identity(),
+            self.clip_mask.as_ref(),
+        );
+        Ok(())
+    }
+
+    fn stroke_line(
+        &mut self,
+        start: Point,
+        end: Point,
+        color: Rgb565,
+        width: u32,
+    ) -> Result<(), RenderError> {
+        if width == 0 {
+            return Ok(());
+        }
+        let mut pb = PathBuilder::new();
+        pb.move_to(start.x as f32 + 0.5, start.y as f32 + 0.5);
+        pb.line_to(end.x as f32 + 0.5, end.y as f32 + 0.5);
+        let Some(path) = pb.finish() else {
+            return Ok(());
+        };
+        let mut paint = Paint::default();
+        paint.set_color(rgb565_to_skia(color));
+        paint.anti_alias = true;
+        let mut stroke = Stroke::default();
+        stroke.width = width as f32;
+        self.pixmap
+            .stroke_path(&path, &paint, &stroke, Transform::identity(), self.clip_mask.as_ref());
+        Ok(())
+    }
+
+    fn draw_text(
+        &mut self,
+        text: &str,
+        position: Point,
+        font: &MonoFont<'_>,
+        color: Rgb565,
+        alignment: Alignment,
+    ) -> Result<(), RenderError> {
+        let style = MonoTextStyle::new(font, color);
+        let mut adapter = PixmapDrawTarget {
+            pixmap: &mut *self.pixmap,
+            clip: self.clip_rect,
+        };
+        Text::with_alignment(text, position, style, alignment)
+            .draw(&mut adapter)
+            .map(|_| ())
+            .map_err(|_| RenderError)
+    }
+
+    fn push_clip(&mut self, rect: Rectangle) {
+        let new_rect = match self.clip_rect {
+            Some(existing) => intersect(existing, rect),
+            None => rect,
+        };
+        let new_mask = if new_rect.size.width == 0 || new_rect.size.height == 0 {
+            // Empty clip — build a fully-black mask (nothing draws).
+            Some(Mask::new(self.pixmap.width(), self.pixmap.height()).expect("mask"))
+        } else {
+            build_rect_mask(self.pixmap.width(), self.pixmap.height(), new_rect)
+        };
+        let prev_mask = core::mem::replace(&mut self.clip_mask, new_mask);
+        let prev_rect = self.clip_rect.replace(new_rect);
+        self.clip_stack.push((prev_mask, prev_rect));
+    }
+
+    fn pop_clip(&mut self) {
+        if let Some((mask, rect)) = self.clip_stack.pop() {
+            self.clip_mask = mask;
+            self.clip_rect = rect;
+        }
+    }
+}
+
+fn intersect(a: Rectangle, b: Rectangle) -> Rectangle {
+    let ax2 = a.top_left.x + a.size.width as i32;
+    let ay2 = a.top_left.y + a.size.height as i32;
+    let bx2 = b.top_left.x + b.size.width as i32;
+    let by2 = b.top_left.y + b.size.height as i32;
+    let x1 = a.top_left.x.max(b.top_left.x);
+    let y1 = a.top_left.y.max(b.top_left.y);
+    let x2 = ax2.min(bx2);
+    let y2 = ay2.min(by2);
+    if x2 <= x1 || y2 <= y1 {
+        Rectangle::new(Point::new(x1, y1), Size::zero())
+    } else {
+        Rectangle::new(
+            Point::new(x1, y1),
+            Size::new((x2 - x1) as u32, (y2 - y1) as u32),
+        )
+    }
+}
+
+fn build_rect_mask(pixmap_w: u32, pixmap_h: u32, rect: Rectangle) -> Option<Mask> {
+    let mut mask = Mask::new(pixmap_w, pixmap_h)?;
+    let sk_rect = SkRect::from_xywh(
+        rect.top_left.x as f32,
+        rect.top_left.y as f32,
+        rect.size.width as f32,
+        rect.size.height as f32,
+    )?;
+    let path = PathBuilder::from_rect(sk_rect);
+    mask.fill_path(&path, FillRule::Winding, false, Transform::identity());
+    Some(mask)
+}
+
+/// `DrawTarget<Color = Rgb565>` adapter so embedded-graphics text and
+/// other built-in primitives can write directly into the tiny-skia
+/// pixmap. Used only for text in this backend; shapes go through
+/// `TinySkiaRenderer` for AA.
+struct PixmapDrawTarget<'p> {
+    pixmap: &'p mut Pixmap,
+    clip: Option<Rectangle>,
+}
+
+impl<'p> OriginDimensions for PixmapDrawTarget<'p> {
+    fn size(&self) -> Size {
+        Size::new(self.pixmap.width(), self.pixmap.height())
+    }
+}
+
+impl<'p> DrawTarget for PixmapDrawTarget<'p> {
+    type Color = Rgb565;
+    type Error = Infallible;
+
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        let w = self.pixmap.width() as i32;
+        let h = self.pixmap.height() as i32;
+        let stride = self.pixmap.width() as usize * 4;
+        let (cx1, cy1, cx2, cy2) = match self.clip {
+            Some(r) => (
+                r.top_left.x,
+                r.top_left.y,
+                r.top_left.x + r.size.width as i32,
+                r.top_left.y + r.size.height as i32,
+            ),
+            None => (0, 0, w, h),
+        };
+        let data = self.pixmap.data_mut();
+        for Pixel(p, c) in pixels {
+            if p.x < cx1 || p.y < cy1 || p.x >= cx2 || p.y >= cy2 {
+                continue;
+            }
+            if p.x < 0 || p.y < 0 || p.x >= w || p.y >= h {
+                continue;
+            }
+            let off = p.y as usize * stride + p.x as usize * 4;
+            let (r, g, b) = rgb565_components(c);
+            data[off] = r;
+            data[off + 1] = g;
+            data[off + 2] = b;
+            data[off + 3] = 255;
+        }
+        Ok(())
+    }
+}
+
+fn rgb565_components(c: Rgb565) -> (u8, u8, u8) {
+    // Upscale 5/6/5-bit channels to 8 by replicating high bits into the lows.
+    let r5 = c.r();
+    let g6 = c.g();
+    let b5 = c.b();
+    let r = (r5 << 3) | (r5 >> 2);
+    let g = (g6 << 2) | (g6 >> 4);
+    let b = (b5 << 3) | (b5 >> 2);
+    (r, g, b)
+}
+
+fn rgb565_to_skia(c: Rgb565) -> SkColor {
+    let (r, g, b) = rgb565_components(c);
+    SkColor::from_rgba8(r, g, b, 255)
+}
+
+fn rgba8_to_rgb565(r: u8, g: u8, b: u8) -> Rgb565 {
+    Rgb565::new(r >> 3, g >> 2, b >> 3)
+}

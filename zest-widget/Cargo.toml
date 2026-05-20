@@ -1,0 +1,69 @@
+[package]
+name = "zest-widget"
+description = "Standard widget library for the zest GUI framework."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+embedded-graphics.workspace = true
+embedded-graphics-core.workspace = true
+zest-core.workspace = true
+zest-theme.workspace = true
+
+[dev-dependencies]
+# Examples use the framework's default desktop platform (simulator) and
+# embassy's std executor. Enabling the simulator feature on zest pulls
+# in SDL2 only for example builds; library users on embedded targets
+# aren't affected. The `net` feature pulls in zest's HTTP shim so the
+# weather demo doesn't need to depend on reqwest directly.
+zest = { path = "../zest", features = ["simulator", "net"] }
+embassy-executor = { version = "0.7", features = ["arch-std", "executor-thread"] }
+embassy-time = { version = "0.4", features = ["std", "generic-queue-8"] }
+rand = { version = "0.10.1", default-features = false, features = ["alloc"] }
+rand_chacha = { version = "0.10.0", default-features = false }
+serde = { version = "1.0.228", features = ["derive"], default-features = false }
+chrono = "0.4.44"
+
+[lints]
+workspace = true
+
+# Examples — runnable via `cargo run -p zest-widget --example <name>`.
+[[example]]
+name = "counter_app"
+path = "examples/counter_app.rs"
+
+[[example]]
+name = "button"
+path = "examples/button.rs"
+
+[[example]]
+name = "column"
+path = "examples/column.rs"
+
+[[example]]
+name = "row"
+path = "examples/row.rs"
+
+[[example]]
+name = "grid"
+path = "examples/grid.rs"
+
+[[example]]
+name = "container"
+path = "examples/container.rs"
+
+[[example]]
+name = "keyboard"
+path = "examples/keyboard.rs"
+
+[[example]]
+name = "app"
+path = "examples/app.rs"
+
+[[example]]
+name = "calendar"
+path = "examples/calendar.rs"
