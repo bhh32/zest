@@ -59,6 +59,9 @@ pub trait Renderer<C: PixelColor> {
         alignment: Alignment,
     ) -> Result<(), RenderError>;
 
+    /// Used to draw an Image widget.
+    fn draw_image(&mut self, top_left: Point, size: Size, pixels: &[C]) -> Result<(), RenderError>;
+
     /// Push a clipping rectangle. Subsequent draw calls are restricted
     /// to the intersection of all currently-pushed clip rects.
     ///
@@ -140,6 +143,13 @@ where
         Text::with_alignment(text, position, style, alignment)
             .draw(self.target)
             .map(|_| ())
+            .map_err(|_| RenderError)
+    }
+
+    fn draw_image(&mut self, top_left: Point, size: Size, pixels: &[C]) -> Result<(), RenderError> {
+        let area = Rectangle::new(top_left, size);
+        self.target
+            .fill_contiguous(&area, pixels.iter().copied())
             .map_err(|_| RenderError)
     }
 }

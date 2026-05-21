@@ -330,6 +330,48 @@ impl<'p> Renderer<Rgb565> for TinySkiaRenderer<'p> {
             .map_err(|_| RenderError)
     }
 
+    fn draw_image(
+        &mut self,
+        top_left: Point,
+        size: Size,
+        pixels: &[Rgb565],
+    ) -> Result<(), RenderError> {
+        let w = size.width as i32;
+        if w == 0 {
+            return Ok(());
+        }
+        let pw = self.pixmap.width() as i32;
+        let ph = self.pixmap.height() as i32;
+        let stride = self.pixmap.width() as usize * 4;
+        let (cx1, cy1, cx2, cy2) = match self.clip_rect {
+            Some(r) => (
+                r.top_left.x,
+                r.top_left.y,
+                r.top_left.x + r.size.width as i32,
+                r.top_left.y + r.size.height as i32,
+            ),
+            None => (0, 0, pw, ph),
+        };
+        let data = self.pixmap.data_mut();
+        for (i, color) in pixels.iter().enumerate() {
+            let x = top_left.x + (i as i32 % w);
+            let y = top_left.y + (i as i32 / w);
+            if x < cx1 || y < cy1 || x >= cx2 || y >= cy2 {
+                continue;
+            }
+            if x < 0 || y < 0 || x >= pw || y >= ph {
+                continue;
+            }
+            let off = y as usize * stride + x as usize * 4;
+            let (r, g, b) = rgb565_components(*color);
+            data[off] = r;
+            data[off + 1] = g;
+            data[off + 2] = b;
+            data[off + 3] = 255;
+        }
+        Ok(())
+    }
+
     fn push_clip(&mut self, rect: Rectangle) {
         let new_rect = match self.clip_rect {
             Some(existing) => intersect(existing, rect),

@@ -67,3 +67,7 @@ path = "examples/app.rs"
 [[example]]
 name = "calendar"
 path = "examples/calendar.rs"
+
+[[example]]
+name = "image"
+path = "examples/image.rs"

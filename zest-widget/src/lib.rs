@@ -8,6 +8,7 @@ extern crate alloc;
 /// Concrete widgets.
 pub mod widget;
 
+pub use widget::Image;
 pub use widget::Widget;
 pub use widget::button::Button;
 pub use widget::calendar::{Calendar, CalendarEvent};
@@ -20,7 +21,9 @@ pub use widget::keyboard::{KeyAction, Keyboard, Layout};
 pub use widget::row::Row;
 pub use widget::scrollable::Scrollable;
 pub use widget::space::{Space, horizontal_space, vertical_space};
-pub use widget::spin_button::{SpinButton, SpinOrientation, horizontal_spin_button, vertical_spin_button};
+pub use widget::spin_button::{
+    SpinButton, SpinOrientation, horizontal_spin_button, vertical_spin_button,
+};
 pub use widget::tab_bar::{Tab, TabBar};
 pub use widget::text::Text;
 pub use widget::weather_icons::{WeatherCondition, WeatherIcon};
