@@ -60,7 +60,14 @@ pub trait Renderer<C: PixelColor> {
     ) -> Result<(), RenderError>;
 
     /// Used to draw an Image widget.
-    fn draw_image(&mut self, top_left: Point, size: Size, pixels: &[C]) -> Result<(), RenderError>;
+    fn draw_image(
+        &mut self,
+        _top_left: Point,
+        _size: Size,
+        _pixels: &[C],
+    ) -> Result<(), RenderError> {
+        Ok(())
+    }
 
     /// Push a clipping rectangle. Subsequent draw calls are restricted
     /// to the intersection of all currently-pushed clip rects.
