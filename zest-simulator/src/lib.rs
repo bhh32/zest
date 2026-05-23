@@ -107,6 +107,7 @@ impl SimulatorPlatformBuilder {
             size: self.size,
             mouse_down: false,
             poll_ms: self.poll_ms,
+            pending: None,
         }
     }
 }
@@ -119,6 +120,10 @@ pub struct SimulatorPlatform {
     size: Size,
     mouse_down: bool,
     poll_ms: u64,
+    /// One-slot buffer holding a discrete Down/Up event that arrived in the
+    /// same poll batch as coalesced moves, so it is delivered on the next
+    /// `next_event` call rather than dropped.
+    pending: Option<InputEvent>,
 }
 
 impl SimulatorPlatform {
@@ -141,6 +146,19 @@ impl Platform for SimulatorPlatform {
 
     async fn next_event(&mut self) -> Option<InputEvent> {
         loop {
+            // Deliver a Down/Up buffered from a previous batch first.
+            if let Some(ev) = self.pending.take() {
+                return Some(ev);
+            }
+
+            // Drain the whole SDL batch, coalescing consecutive mouse moves
+            // into just the latest position. Returning on the first move
+            // (the old behaviour) left the rest queued, so during a fast
+            // drag the rendered position trailed the cursor and the backlog
+            // grew — visible as lag. A discrete Down/Up that lands in the
+            // same batch as moves is buffered in `self.pending` and the
+            // pending move is flushed first, so no event is lost.
+            let mut latest_move: Option<Point> = None;
             for sim_event in self.window.events() {
                 match sim_event {
                     SimulatorEvent::Quit => return None,
@@ -149,29 +167,48 @@ impl Platform for SimulatorPlatform {
                         point,
                     } => {
                         self.mouse_down = true;
-                        return Some(InputEvent::Touch(TouchEvent {
+                        let down = InputEvent::Touch(TouchEvent {
                             phase: TouchPhase::Down,
                             point,
-                        }));
+                        });
+                        if let Some(p) = latest_move.take() {
+                            self.pending = Some(down);
+                            return Some(InputEvent::Touch(TouchEvent {
+                                phase: TouchPhase::Moved,
+                                point: p,
+                            }));
+                        }
+                        return Some(down);
                     }
                     SimulatorEvent::MouseButtonUp {
                         mouse_btn: MouseButton::Left,
                         point,
                     } => {
                         self.mouse_down = false;
-                        return Some(InputEvent::Touch(TouchEvent {
+                        let up = InputEvent::Touch(TouchEvent {
                             phase: TouchPhase::Up,
                             point,
-                        }));
+                        });
+                        if let Some(p) = latest_move.take() {
+                            self.pending = Some(up);
+                            return Some(InputEvent::Touch(TouchEvent {
+                                phase: TouchPhase::Moved,
+                                point: p,
+                            }));
+                        }
+                        return Some(up);
                     }
                     SimulatorEvent::MouseMove { point } if self.mouse_down => {
-                        return Some(InputEvent::Touch(TouchEvent {
-                            phase: TouchPhase::Moved,
-                            point,
-                        }));
+                        latest_move = Some(point);
                     }
                     _ => {}
                 }
+            }
+            if let Some(point) = latest_move {
+                return Some(InputEvent::Touch(TouchEvent {
+                    phase: TouchPhase::Moved,
+                    point,
+                }));
             }
             Timer::after(Duration::from_millis(self.poll_ms)).await;
         }
@@ -311,6 +348,64 @@ impl<'p> Renderer<Rgb565> for TinySkiaRenderer<'p> {
         Ok(())
     }
 
+    fn stroke_arc(
+        &mut self,
+        center: Point,
+        radius: u32,
+        start_deg: i32,
+        sweep_deg: i32,
+        width: u32,
+        color: Rgb565,
+    ) -> Result<(), RenderError> {
+        if radius == 0 || width == 0 || sweep_deg == 0 {
+            return Ok(());
+        }
+        let Some(path) = arc_path(center, radius, start_deg, sweep_deg, false) else {
+            return Ok(());
+        };
+        let mut paint = Paint::default();
+        paint.set_color(rgb565_to_skia(color));
+        paint.anti_alias = true;
+        let mut stroke = Stroke::default();
+        stroke.width = width as f32;
+        stroke.line_cap = tiny_skia::LineCap::Round;
+        self.pixmap.stroke_path(
+            &path,
+            &paint,
+            &stroke,
+            Transform::identity(),
+            self.clip_mask.as_ref(),
+        );
+        Ok(())
+    }
+
+    fn fill_arc(
+        &mut self,
+        center: Point,
+        radius: u32,
+        start_deg: i32,
+        sweep_deg: i32,
+        color: Rgb565,
+    ) -> Result<(), RenderError> {
+        if radius == 0 || sweep_deg == 0 {
+            return Ok(());
+        }
+        let Some(path) = arc_path(center, radius, start_deg, sweep_deg, true) else {
+            return Ok(());
+        };
+        let mut paint = Paint::default();
+        paint.set_color(rgb565_to_skia(color));
+        paint.anti_alias = true;
+        self.pixmap.fill_path(
+            &path,
+            &paint,
+            FillRule::Winding,
+            Transform::identity(),
+            self.clip_mask.as_ref(),
+        );
+        Ok(())
+    }
+
     fn draw_text(
         &mut self,
         text: &str,
@@ -413,6 +508,50 @@ fn intersect(a: Rectangle, b: Rectangle) -> Rectangle {
             Size::new((x2 - x1) as u32, (y2 - y1) as u32),
         )
     }
+}
+
+/// Build a tiny-skia path for a circular arc centered at `center`.
+///
+/// Sweeps `sweep_deg` degrees from `start_deg` (0° points right,
+/// positive sweep is counter-clockwise on screen). When `pie` is true
+/// the path is closed through the center to form a fillable sector;
+/// otherwise it is an open polyline suitable for stroking.
+fn arc_path(
+    center: Point,
+    radius: u32,
+    start_deg: i32,
+    sweep_deg: i32,
+    pie: bool,
+) -> Option<tiny_skia::Path> {
+    let total = sweep_deg.unsigned_abs().min(360);
+    let step: f32 = if sweep_deg >= 0 { 1.0 } else { -1.0 };
+    let r = radius as f32;
+    let cx = center.x as f32 + 0.5;
+    let cy = center.y as f32 + 0.5;
+
+    let point_at = |deg: f32| -> (f32, f32) {
+        let rad = deg * core::f32::consts::PI / 180.0;
+        // Screen y grows downward, so negate the sine.
+        (cx + rad.cos() * r, cy - rad.sin() * r)
+    };
+
+    let mut pb = PathBuilder::new();
+    if pie {
+        pb.move_to(cx, cy);
+        let (x0, y0) = point_at(start_deg as f32);
+        pb.line_to(x0, y0);
+    } else {
+        let (x0, y0) = point_at(start_deg as f32);
+        pb.move_to(x0, y0);
+    }
+    for i in 1..=total {
+        let (x, y) = point_at(start_deg as f32 + i as f32 * step);
+        pb.line_to(x, y);
+    }
+    if pie {
+        pb.close();
+    }
+    pb.finish()
 }
 
 fn build_rect_mask(pixmap_w: u32, pixmap_h: u32, rect: Rectangle) -> Option<Mask> {

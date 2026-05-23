@@ -71,3 +71,59 @@ path = "examples/calendar.rs"
 [[example]]
 name = "image"
 path = "examples/image.rs"
+
+[[example]]
+name = "scroll_list"
+path = "examples/scroll_list.rs"
+
+[[example]]
+name = "scroll_snap"
+path = "examples/scroll_snap.rs"
+
+[[example]]
+name = "arc"
+path = "examples/arc.rs"
+
+[[example]]
+name = "scale"
+path = "examples/scale.rs"
+
+[[example]]
+name = "spinner"
+path = "examples/spinner.rs"
+
+[[example]]
+name = "checkbox"
+path = "examples/checkbox.rs"
+
+[[example]]
+name = "switch"
+path = "examples/switch.rs"
+
+[[example]]
+name = "slider"
+path = "examples/slider.rs"
+
+[[example]]
+name = "progress_bar"
+path = "examples/progress_bar.rs"
+
+[[example]]
+name = "radio"
+path = "examples/radio.rs"
+
+[[example]]
+name = "stack"
+path = "examples/stack.rs"
+
+[[example]]
+name = "led"
+path = "examples/led.rs"
+
+[[example]]
+name = "line"
+path = "examples/line.rs"
+
+[[example]]
+name = "chart"
+path = "examples/chart.rs"

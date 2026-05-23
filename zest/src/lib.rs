@@ -66,9 +66,11 @@ pub mod prelude {
         Status, Theme, Typography, convert_theme,
     };
     pub use zest_widget::{
-        Button, Calendar, CalendarEvent, Column, Container, Divider, Element, Grid, IntoElement,
-        KeyAction, Keyboard, Layout, Row, Scrollable, Space, SpinButton, SpinOrientation, Tab,
-        TabBar, Text, Widget, horizontal_divider, horizontal_space, horizontal_spin_button,
+        Arc, Button, Calendar, CalendarEvent, Chart, Checkbox, Column, Container, Divider, Element,
+        Grid, IntoElement, KeyAction, Keyboard, LED, Layout, Line, ProgressBar, RadioButton, Row,
+        Scale, ScaleMode, Scrollable, ScrollDirection, ScrollMsg, ScrollState, ScrollbarMode,
+        SnapMode, Slider, Space, SpinButton, SpinOrientation, Spinner, Stack, Switch, Tab, TabBar,
+        Text, Widget, horizontal_divider, horizontal_space, horizontal_spin_button, tick_task,
         vertical_divider, vertical_space, vertical_spin_button,
     };
 

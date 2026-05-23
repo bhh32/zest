@@ -1,6 +1,21 @@
-use core::f32::consts::FRAC_PI_4;
+use core::f32::consts::FRAC_1_SQRT_2;
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*, primitives::Rectangle};
 use zest_core::{RenderError, Renderer};
+
+/// `(cos, sin)` for the eight ray angles `n * π/4`, `n = 0..8`.
+///
+/// Precomputed so this module needs no `f32` trig (which would pull in a
+/// `micromath`/`libm` dependency on `no_std` targets).
+const RAY_DIRS: [(f32, f32); 8] = [
+    (1.0, 0.0),
+    (FRAC_1_SQRT_2, FRAC_1_SQRT_2),
+    (0.0, 1.0),
+    (-FRAC_1_SQRT_2, FRAC_1_SQRT_2),
+    (-1.0, 0.0),
+    (-FRAC_1_SQRT_2, -FRAC_1_SQRT_2),
+    (0.0, -1.0),
+    (FRAC_1_SQRT_2, -FRAC_1_SQRT_2),
+];
 
 pub(crate) fn draw(
     renderer: &mut dyn Renderer<Rgb565>,
@@ -13,9 +28,7 @@ pub(crate) fn draw(
 
     renderer.fill_circle(center, body_ray as u32, Rgb565::CSS_GOLD)?;
 
-    for ray in 0..8 {
-        let angle = ray as f32 * FRAC_PI_4;
-        let (sin, cos) = angle.sin_cos();
+    for &(cos, sin) in &RAY_DIRS {
         let start = center
             + Point::new(
                 (cos * (body_ray + 2) as f32) as i32,

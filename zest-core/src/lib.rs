@@ -12,6 +12,7 @@ pub mod platform;
 pub mod renderer;
 pub mod runtime;
 pub mod screen;
+pub mod scroll;
 pub mod time;
 pub mod widget;
 
@@ -19,7 +20,10 @@ pub use application::{Application, Recipe, Subscription, Task};
 pub use event::{InputEvent, TickResult, TouchEvent, TouchPhase};
 pub use layout::{Constraints, Horizontal, Length, UNBOUNDED, Vertical};
 pub use platform::Platform;
-pub use renderer::{DrawTargetRenderer, RenderError, Renderer};
+pub use renderer::{DrawTargetRenderer, RenderError, Renderer, arc_sin_cos};
 pub use runtime::Runtime;
 pub use screen::ScreenView;
 pub use widget::{Element, IntoElement, Widget};
+pub use scroll::{
+    GesturePhase, ScrollDirection, ScrollMsg, ScrollState, ScrollbarMode, SnapMode, tick_task,
+};
