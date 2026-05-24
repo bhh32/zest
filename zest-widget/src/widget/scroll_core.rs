@@ -284,8 +284,10 @@ pub fn draw_scrollbars<C: PixelColor>(
 
 /// Thumb rectangle within `track`. `vp`/`content` are the relevant axis
 /// extents, `offset` the current scroll on that axis, `vertical` selects the
-/// axis. Mirrors the proven proportional thumb math in `scrollable.rs`.
-fn thumb_rect(track: Rectangle, vp: u32, content: u32, offset: i32, vertical: bool) -> Rectangle {
+/// axis. Mirrors the proven proportional thumb math in `scrollable.rs`, which
+/// re-uses this helper so the math lives in one place.
+#[must_use]
+pub fn thumb_rect(track: Rectangle, vp: u32, content: u32, offset: i32, vertical: bool) -> Rectangle {
     let track_len = if vertical {
         track.size.height
     } else {

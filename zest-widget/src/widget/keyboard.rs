@@ -1,93 +1,174 @@
-//! On-screen QWERTY keyboard. Generic over color *and* the user's
-//! message type — a callback at construction time translates each
-//! [`KeyAction`] into a user message that the screen interprets.
+//! On-screen keyboard modeled on LVGL's `lv_keyboard`.
 //!
-//! In the transient widget model, the screen owns the keyboard's
-//! state (input string, layout, shift flag). Each frame `view()`
-//! constructs a fresh `Keyboard` from current state. The screen
-//! handles `KeyAction` messages in its `update` to mutate state.
+//! The keyboard has four keymaps ([`KeyboardMode`]) — lowercase text,
+//! uppercase text, special symbols, and a numeric pad — mirroring LVGL's
+//! `LV_KEYBOARD_MODE_*`. The mode keys (`1#`, `ABC`/`abc`) switch the active
+//! keymap *in place*: uppercase is a sticky mode like LVGL's, not a one-shot
+//! shift. Character keys emit [`KeyAction::Char`]; the control keys emit
+//! backspace, newline, cursor-left / cursor-right, OK ([`KeyAction::Ready`])
+//! and hide ([`KeyAction::Cancel`]) — the same control set LVGL's keyboard
+//! sends to its attached text area.
+//!
+//! In the transient widget model the *host* owns the current
+//! [`KeyboardMode`] (and the edited text). Each frame `view()` builds a fresh
+//! `Keyboard` from the current mode, and the host's `update` applies each
+//! [`KeyAction`] — inserting / deleting characters, moving the cursor, and
+//! switching mode on [`KeyAction::Mode`]. Pair it with a
+//! [`TextArea`](super::text_area::TextArea) for an LVGL keyboard+textarea
+//! setup; the built-in preview field is off by default (enable it with
+//! [`show_field`](Keyboard::show_field) for a standalone keyboard).
 
 use super::{Widget, button::Button, column::Column, row::Row};
-use alloc::string::{String, ToString};
+use alloc::{
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 use embedded_graphics::{
     pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
-use zest_theme::Theme;
+use zest_theme::{ButtonClass, Theme};
 
-/// A key action emitted by the keyboard. The screen receives these as
-/// messages (via a translation callback passed at construction) and
-/// mutates its own state in `update`.
+/// Reserved height (px) for the optional title + preview field.
+const FIELD_H: u32 = 70;
+
+/// Keyboard keymap, mirroring LVGL's `lv_keyboard_mode_t`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeyboardMode {
+    /// Lowercase QWERTY letters.
+    TextLower,
+    /// Uppercase QWERTY letters.
+    TextUpper,
+    /// Special symbols and punctuation.
+    Special,
+    /// Numeric pad.
+    Number,
+}
+
+/// An action emitted by a key press. The host applies it in `update`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyAction {
-    /// User tapped a character key.
+    /// Insert this character at the cursor.
     Char(char),
-    /// User tapped backspace.
+    /// Delete the character before the cursor.
     Backspace,
-    /// User tapped shift.
-    Shift,
-    /// User tapped the alpha/numeric layout toggle.
-    SwitchLayout,
-    /// User tapped space.
-    Space,
-    /// User tapped Done / OK.
-    Done,
-    /// User tapped Cancel.
+    /// Insert a line break (or submit, for single-line fields).
+    Newline,
+    /// Move the cursor one character left.
+    CursorLeft,
+    /// Move the cursor one character right.
+    CursorRight,
+    /// Switch to a different keymap. The host stores the new
+    /// [`KeyboardMode`] and passes it back next frame.
+    Mode(KeyboardMode),
+    /// Accept / confirm (LVGL `LV_EVENT_READY`).
+    Ready,
+    /// Hide / cancel (LVGL `LV_EVENT_CANCEL`).
     Cancel,
 }
 
-/// Keyboard layout.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Layout {
-    /// QWERTY alphabetic layout.
-    Alpha,
-    /// Numeric and symbol layout.
-    Numeric,
+/// A single key in a keymap row: a label, the action it emits, and a flex
+/// weight (control keys are wider than character keys).
+struct Key {
+    label: String,
+    action: KeyAction,
+    weight: u32,
 }
 
-/// On-screen QWERTY keyboard.
-///
-/// Constructed fresh each frame from screen state. The screen owns
-/// the input text, current layout, and shift flag; it passes them in
-/// at construction. Each button emits a user `M` value computed at
-/// build time via the `on_action` callback.
+/// A character key (flex weight 1).
+fn ch(c: char) -> Key {
+    Key {
+        label: c.to_string(),
+        action: KeyAction::Char(c),
+        weight: 1,
+    }
+}
+
+/// A control key with an explicit label and flex weight.
+fn ctrl(label: &str, action: KeyAction, weight: u32) -> Key {
+    Key {
+        label: label.to_string(),
+        action,
+        weight,
+    }
+}
+
+/// The shared bottom row for the text/special keymaps:
+/// hide | cursor-left | space | cursor-right | OK.
+fn bottom_row() -> Vec<Key> {
+    vec![
+        ctrl("▼", KeyAction::Cancel, 2),
+        ctrl("←", KeyAction::CursorLeft, 1),
+        ctrl("space", KeyAction::Char(' '), 6),
+        ctrl("→", KeyAction::CursorRight, 1),
+        ctrl("OK", KeyAction::Ready, 2),
+    ]
+}
+
+/// On-screen keyboard. Built fresh each frame from the host-owned
+/// [`KeyboardMode`].
 pub struct Keyboard<'a, C: PixelColor, M: Clone> {
     bounds: Rectangle,
     title: String,
     input: String,
     is_password: bool,
+    show_field: bool,
     keys: Column<'a, C, M>,
     width: Length,
     height: Length,
 }
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
-    /// Construct a keyboard. `on_action` translates a `KeyAction` into
-    /// the user's message type. Position and size are assigned by the
-    /// parent via `arrange`.
-    pub fn new<F>(
-        title: impl Into<String>,
-        input: impl Into<String>,
-        is_password: bool,
-        layout: Layout,
-        shift: bool,
-        on_action: F,
-    ) -> Self
+    /// Construct a keyboard for `mode`. `on_action` translates each
+    /// [`KeyAction`] into the host's message type. Position and size are
+    /// assigned by the parent via `arrange`.
+    pub fn new<F>(mode: KeyboardMode, on_action: F) -> Self
     where
         F: Fn(KeyAction) -> M + Copy + 'a,
     {
-        let title = title.into();
-        let input = input.into();
-        let keys = Self::build_keys(layout, shift, on_action);
+        let keys = Self::build_keys(mode, on_action);
         Self {
             bounds: Rectangle::zero(),
-            title,
-            input,
-            is_password,
+            title: String::new(),
+            input: String::new(),
+            is_password: false,
+            show_field: false,
             keys,
             width: Length::Fill,
             height: Length::Fill,
         }
+    }
+
+    /// Builder: title shown above the optional preview field.
+    #[must_use]
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = title.into();
+        self
+    }
+
+    /// Builder: text shown in the optional preview field.
+    #[must_use]
+    pub fn input(mut self, input: impl Into<String>) -> Self {
+        self.input = input.into();
+        self
+    }
+
+    /// Builder: render the preview field's text masked as `*`.
+    #[must_use]
+    pub fn is_password(mut self, is_password: bool) -> Self {
+        self.is_password = is_password;
+        self
+    }
+
+    /// Builder: show the built-in title + preview field at the top (default
+    /// `false`). Leave off when pairing with a
+    /// [`TextArea`](super::text_area::TextArea); turn on for a standalone
+    /// keyboard that displays its own input.
+    #[must_use]
+    pub fn show_field(mut self, show: bool) -> Self {
+        self.show_field = show;
+        self
     }
 
     /// Builder: width sizing intent.
@@ -104,138 +185,124 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
         self
     }
 
-    fn key_bounds_for(bounds: Rectangle) -> Rectangle {
-        // Top 70px reserved for title + input field.
+    fn key_bounds_for(&self, bounds: Rectangle) -> Rectangle {
+        let reserve: u32 = if self.show_field { FIELD_H } else { 0 };
         Rectangle::new(
-            Point::new(bounds.top_left.x, bounds.top_left.y + 70),
-            Size::new(bounds.size.width, bounds.size.height.saturating_sub(70)),
+            Point::new(bounds.top_left.x, bounds.top_left.y + reserve as i32),
+            Size::new(bounds.size.width, bounds.size.height.saturating_sub(reserve)),
         )
     }
 
-    fn build_keys<F>(layout: Layout, shift: bool, on_action: F) -> Column<'a, C, M>
+    fn build_keys<F>(mode: KeyboardMode, on_action: F) -> Column<'a, C, M>
     where
         F: Fn(KeyAction) -> M + Copy + 'a,
     {
-        Column::new()
-            .push(Self::build_letter_row(layout, shift, 0, on_action))
-            .push(Self::build_letter_row(layout, shift, 1, on_action))
-            .push(Self::build_row2(layout, shift, on_action))
-            .push(Self::build_bottom_row(layout, on_action))
+        let mut col = Column::new().spacing(2);
+        for row in keymap(mode) {
+            col = col.push(Self::build_row(row, on_action));
+        }
+        col
     }
 
-    fn build_letter_row<F>(
-        layout: Layout,
-        shift: bool,
-        row: usize,
-        on_action: F,
-    ) -> Row<'a, C, M>
+    fn build_row<F>(spec: Vec<Key>, on_action: F) -> Row<'a, C, M>
     where
         F: Fn(KeyAction) -> M + Copy + 'a,
     {
-        let chars: &[char] = match (layout, row) {
-            (Layout::Alpha, 0) => &['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-            (Layout::Alpha, 1) => &['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
-            (Layout::Numeric, 0) => &['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-            (Layout::Numeric, 1) => &['!', '@', '#', '$', '%', '^', '&', '*', '(', ')'],
-            _ => &[],
-        };
-
-        let mut row_widget = Row::new();
-        for &ch in chars {
-            let display_ch = if shift && layout == Layout::Alpha && ch.is_ascii_lowercase() {
-                ch.to_ascii_uppercase()
-            } else {
-                ch
+        let mut row = Row::new().spacing(2);
+        for key in spec {
+            let class = match key.action {
+                KeyAction::Ready => ButtonClass::Suggested,
+                KeyAction::Cancel => ButtonClass::Destructive,
+                _ => ButtonClass::Standard,
             };
-            let mut buf = [0u8; 4];
-            let label = display_ch.encode_utf8(&mut buf).to_string();
-            let btn = Button::new(label)
-                .on_press(on_action(KeyAction::Char(ch)));
-            row_widget = row_widget.push(btn);
-        }
-
-        if matches!((layout, row), (Layout::Alpha, 1)) {
-            let btn = Button::new("<-")
-                .on_press(on_action(KeyAction::Backspace));
-            row_widget = row_widget.push(btn);
-        }
-
-        row_widget
-    }
-
-    fn build_row2<F>(layout: Layout, shift: bool, on_action: F) -> Row<'a, C, M>
-    where
-        F: Fn(KeyAction) -> M + Copy + 'a,
-    {
-        let mut row = Row::new();
-        match layout {
-            Layout::Alpha => {
-                let shift_label = if shift { "^" } else { "v" };
-                row = row.push(
-                    Button::new(shift_label)
-                        .on_press(on_action(KeyAction::Shift)),
-                );
-
-                for ch in ['z', 'x', 'c', 'v', 'b', 'n', 'm', '.'] {
-                    let dch = if shift && ch.is_ascii_lowercase() {
-                        ch.to_ascii_uppercase()
-                    } else {
-                        ch
-                    };
-                    let mut buf = [0u8; 4];
-                    let label = dch.encode_utf8(&mut buf).to_string();
-                    row = row.push(
-                        Button::new(label)
-                            .on_press(on_action(KeyAction::Char(ch))),
-                    );
-                }
-                row = row.push(
-                    Button::new("OK").on_press(on_action(KeyAction::Done)),
-                );
-            }
-            Layout::Numeric => {
-                for ch in ['-', '_', '+', '=', '/', '\\', ';', ':', ','] {
-                    let mut buf = [0u8; 4];
-                    let label = ch.encode_utf8(&mut buf).to_string();
-                    row = row.push(
-                        Button::new(label)
-                            .on_press(on_action(KeyAction::Char(ch))),
-                    );
-                }
-                row = row.push(
-                    Button::new("OK").on_press(on_action(KeyAction::Done)),
-                );
-            }
+            row = row.push(
+                Button::new(key.label)
+                    .on_press(on_action(key.action))
+                    .class(class)
+                    .width(Length::FillPortion(key.weight)),
+            );
         }
         row
     }
+}
 
-    /// Bottom row uses weighted children: toggle(2) + space(6) + cancel(2).
-    fn build_bottom_row<F>(layout: Layout, on_action: F) -> Row<'a, C, M>
-    where
-        F: Fn(KeyAction) -> M + Copy + 'a,
-    {
-        let toggle_label = match layout {
-            Layout::Alpha => "123",
-            Layout::Numeric => "abc",
-        };
+/// The keymap (rows of keys) for a given mode, following LVGL's layouts.
+fn keymap(mode: KeyboardMode) -> Vec<Vec<Key>> {
+    use KeyAction::{Backspace, CursorLeft, CursorRight, Mode, Newline, Ready};
+    use KeyboardMode::{Number, Special, TextLower, TextUpper};
 
-        Row::new()
-            .push(
-                Button::new(toggle_label)
-                    .on_press(on_action(KeyAction::SwitchLayout))
-                    .width(Length::FillPortion(2)),
-            )
-            .push(
-                Button::new("space")
-                    .on_press(on_action(KeyAction::Space))
-                    .width(Length::FillPortion(6)),
-            )
-            .push(
-                Button::new("X")
-                    .on_press(on_action(KeyAction::Cancel))
-                    .width(Length::FillPortion(2)),
-            )
+    /// Helper: build a row from a leading control key, a run of chars, and a
+    /// trailing control key.
+    fn text_row(lead: Key, mids: &str, tail: Key) -> Vec<Key> {
+        let mut r = vec![lead];
+        r.extend(mids.chars().map(ch));
+        r.push(tail);
+        r
+    }
+
+    match mode {
+        TextLower => vec![
+            text_row(
+                ctrl("123", Mode(Special), 3),
+                "qwertyuiop",
+                ctrl("⌫", Backspace, 3),
+            ),
+            text_row(
+                ctrl("ABC", Mode(TextUpper), 3),
+                "asdfghjkl",
+                ctrl("↵", Newline, 3),
+            ),
+            "_-zxcvbnm.,:".chars().map(ch).collect(),
+            bottom_row(),
+        ],
+        TextUpper => vec![
+            text_row(
+                ctrl("123", Mode(Special), 3),
+                "QWERTYUIOP",
+                ctrl("⌫", Backspace, 3),
+            ),
+            text_row(
+                ctrl("abc", Mode(TextLower), 3),
+                "ASDFGHJKL",
+                ctrl("↵", Newline, 3),
+            ),
+            "_-ZXCVBNM.,:".chars().map(ch).collect(),
+            bottom_row(),
+        ],
+        Special => vec![
+            {
+                let mut r: Vec<Key> = "0123456789".chars().map(ch).collect();
+                r.push(ctrl("⌫", Backspace, 3));
+                r
+            },
+            text_row(ctrl("abc", Mode(TextLower), 3), "+-/*=%!?#<>", ctrl("↵", Newline, 3)),
+            "\\@$(){}[];\"'".chars().map(ch).collect(),
+            bottom_row(),
+        ],
+        Number => vec![
+            {
+                let mut r: Vec<Key> = "123".chars().map(ch).collect();
+                r.push(ctrl("▼", KeyAction::Cancel, 1));
+                r
+            },
+            {
+                let mut r: Vec<Key> = "456".chars().map(ch).collect();
+                r.push(ctrl("OK", Ready, 1));
+                r
+            },
+            {
+                let mut r: Vec<Key> = "789".chars().map(ch).collect();
+                r.push(ctrl("⌫", Backspace, 1));
+                r
+            },
+            vec![
+                ctrl("abc", Mode(TextLower), 1),
+                ch('0'),
+                ch('.'),
+                ctrl("←", CursorLeft, 1),
+                ctrl("→", CursorRight, 1),
+            ],
+        ],
     }
 }
 
@@ -254,7 +321,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Keyboard<'a, C, M> 
 
     fn arrange(&mut self, rect: Rectangle) {
         self.bounds = rect;
-        let kb_bounds = Self::key_bounds_for(rect);
+        let kb_bounds = self.key_bounds_for(rect);
         self.keys.arrange(kb_bounds);
     }
 
@@ -277,39 +344,41 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Keyboard<'a, C, M> 
     ) -> Result<(), RenderError> {
         renderer.fill_rect(self.bounds, theme.background.base)?;
 
-        let x0 = self.bounds.top_left.x;
-        let y0 = self.bounds.top_left.y;
-        let width = self.bounds.size.width;
+        if self.show_field {
+            let x0 = self.bounds.top_left.x;
+            let y0 = self.bounds.top_left.y;
+            let width = self.bounds.size.width;
 
-        // Title
-        renderer.draw_text(
-            &self.title,
-            Point::new(x0 + (width / 2) as i32, y0 + 18),
-            theme.default_font(),
-            theme.background.on_base,
-            Alignment::Center,
-        )?;
+            // Title
+            renderer.draw_text(
+                &self.title,
+                Point::new(x0 + (width / 2) as i32, y0 + 18),
+                theme.default_font(),
+                theme.background.on_base,
+                Alignment::Center,
+            )?;
 
-        // Input field outline.
-        let field = Rectangle::new(
-            Point::new(x0 + 8, y0 + 30),
-            Size::new(width.saturating_sub(16), 28),
-        );
-        renderer.stroke_rect(field, theme.button.border)?;
+            // Input field outline.
+            let field = Rectangle::new(
+                Point::new(x0 + 8, y0 + 30),
+                Size::new(width.saturating_sub(16), 28),
+            );
+            renderer.stroke_rect(field, theme.button.border)?;
 
-        let display_text = if self.is_password {
-            "*".repeat(self.input.len())
-        } else {
-            self.input.clone()
-        };
+            let display_text = if self.is_password {
+                "*".repeat(self.input.chars().count())
+            } else {
+                self.input.clone()
+            };
 
-        renderer.draw_text(
-            &display_text,
-            Point::new(x0 + 14, y0 + 49),
-            theme.default_font(),
-            theme.background.on_base,
-            Alignment::Left,
-        )?;
+            renderer.draw_text(
+                &display_text,
+                Point::new(x0 + 14, y0 + 49),
+                theme.default_font(),
+                theme.background.on_base,
+                Alignment::Left,
+            )?;
+        }
 
         // Key grid.
         self.keys.draw(renderer, theme)

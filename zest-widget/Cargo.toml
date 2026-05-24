@@ -127,3 +127,63 @@ path = "examples/line.rs"
 [[example]]
 name = "chart"
 path = "examples/chart.rs"
+
+[[example]]
+name = "list"
+path = "examples/list.rs"
+
+[[example]]
+name = "table"
+path = "examples/table.rs"
+
+[[example]]
+name = "image_button"
+path = "examples/image_button.rs"
+
+[[example]]
+name = "text_area"
+path = "examples/text_area.rs"
+
+[[example]]
+name = "roller"
+path = "examples/roller.rs"
+
+[[example]]
+name = "tileview"
+path = "examples/tileview.rs"
+
+[[example]]
+name = "dropdown"
+path = "examples/dropdown.rs"
+
+[[example]]
+name = "message_box"
+path = "examples/message_box.rs"
+
+[[example]]
+name = "menu"
+path = "examples/menu.rs"
+
+[[example]]
+name = "window"
+path = "examples/window.rs"
+
+[[example]]
+name = "canvas"
+path = "examples/canvas.rs"
+
+[[example]]
+name = "span"
+path = "examples/span.rs"
+
+[[example]]
+name = "scroll_row"
+path = "examples/scroll_row.rs"
+
+[[example]]
+name = "scroll_grid"
+path = "examples/scroll_grid.rs"
+
+[[example]]
+name = "weather_icons"
+path = "examples/weather_icons.rs"

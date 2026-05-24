@@ -302,6 +302,13 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
             let (_, h_intent) = child.preferred_size();
             let h = match h_intent {
                 Length::Fixed(px) => px,
+                // `Fill` is meaningless on an unbounded scroll axis — measuring
+                // it would resolve to `UNBOUNDED` and explode the content
+                // height (a single child taller than the screen, leaving the
+                // rest unreachable). Clamp such a child to one viewport.
+                Length::Fill | Length::FillPortion(_) if scrolls_y => {
+                    self.rect.size.height
+                }
                 _ => child.measure(cross).height,
             };
             heights.push(h);

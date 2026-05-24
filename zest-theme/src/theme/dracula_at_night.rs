@@ -2,7 +2,7 @@
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
 use embedded_graphics::{
-    mono_font::{iso_8859_15::{FONT_10X20, FONT_6X10, FONT_8X13}, MonoFont},
+    mono_font::MonoFont,
     pixelcolor::Rgb888,
 };
 
@@ -28,7 +28,7 @@ const GREEN: Rgb888 = Rgb888::new(0x50, 0xfa, 0x7b);
 const RED: Rgb888 = Rgb888::new(0xff, 0x55, 0x55);
 const YELLOW: Rgb888 = Rgb888::new(0xf1, 0xfa, 0x8c);
 
-const DEFAULT_FONT: &MonoFont<'static> = &FONT_8X13;
+const DEFAULT_FONT: &MonoFont<'static> = &crate::font::FONT_ZEST_MONO;
 
 /// Dracula At Night theme.
 pub const THEME: Theme<'static, Rgb888> = Theme {
@@ -101,7 +101,7 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&FONT_10X20, DEFAULT_FONT, &FONT_6X10),
+    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
     is_dark: true,
     is_high_contrast: false,
 };

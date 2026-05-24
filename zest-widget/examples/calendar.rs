@@ -15,6 +15,7 @@ use embedded_graphics::pixelcolor::WebColors;
 use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 use zest::zest_widget::widget::calendar::CalendarMode;
+use embassy_time::Instant;
 
 const COLORS: &[Rgb565] = &[
     Rgb565::CSS_DEEP_SKY_BLUE,
@@ -44,7 +45,8 @@ enum Msg {
     Save,
     Cancel,
     Delete,
-    DayScroll(i32),
+    Scroll(ScrollMsg),
+    ScrollTick,
 }
 
 #[derive(Clone)]
@@ -83,9 +85,9 @@ struct Cal {
     draft_color: usize,
     draft_hour: i32,
     draft_minute: i32,
-    kb_layout: Layout,
-    kb_shift: bool,
-    day_scroll: i32,
+    kb_mode: KeyboardMode,
+    day_scroll: ScrollState,
+    last_tick: Instant,
 }
 
 impl Cal {
@@ -126,9 +128,9 @@ impl Cal {
             draft_color: 0,
             draft_hour: 9,
             draft_minute: 0,
-            kb_layout: Layout::Alpha,
-            kb_shift: true,
-            day_scroll: 0,
+            kb_mode: KeyboardMode::TextUpper,
+            day_scroll: ScrollState::new(),
+            last_tick: Instant::now(),
         }
     }
 }
@@ -296,9 +298,8 @@ impl Cal {
             .events(events_today);
 
         let scroll_area = Scrollable::new(day_cal)
-            .scroll_y(self.day_scroll)
-            .on_scroll(Msg::DayScroll)
-            .step(36);
+            .scroll_state(&self.day_scroll)
+            .on_scroll(Msg::Scroll);
 
         let actions = Row::new()
             .spacing(4)
@@ -409,15 +410,11 @@ impl Cal {
             .push(time_row)
             .push(actions)
             .push(
-                Keyboard::new(
-                    "Event label",
-                    self.draft_label.clone(),
-                    false,
-                    self.kb_layout,
-                    self.kb_shift,
-                    Msg::Key,
-                )
-                .height(Length::Fill),
+                Keyboard::new(self.kb_mode, Msg::Key)
+                    .title("Event label")
+                    .input(self.draft_label.clone())
+                    .show_field(true)
+                    .height(Length::Fill),
             )
             .into_element()
     }
@@ -499,13 +496,14 @@ impl Application for App {
                 s.draft_color = s.events.len() % COLORS.len();
                 s.draft_hour = hour as i32;
                 s.draft_minute = 0;
-                s.kb_layout = Layout::Alpha;
-                s.kb_shift = true;
+                s.kb_mode = KeyboardMode::TextUpper;
                 s.view = View::Editor { existing: None };
             }
             Msg::OpenDayView => {
                 s.view = View::Day;
-                s.day_scroll = (s.today.day() as i32).min(8) * 18;
+                let mut st = ScrollState::new();
+                st.offset = Point::new(0, (s.today.day() as i32).min(8) * 18);
+                s.day_scroll = st;
             }
             Msg::BackToMonth => {
                 s.view = View::Month;
@@ -515,8 +513,7 @@ impl Application for App {
                 s.draft_color = s.events.len() % COLORS.len();
                 s.draft_hour = 9;
                 s.draft_minute = 0;
-                s.kb_layout = Layout::Alpha;
-                s.kb_shift = true;
+                s.kb_mode = KeyboardMode::TextUpper;
                 s.view = View::Editor { existing: None };
             }
             Msg::EditEvent(idx) => {
@@ -525,8 +522,7 @@ impl Application for App {
                     s.draft_color = ev.color_idx;
                     s.draft_hour = ev.hour as i32;
                     s.draft_minute = ev.minute as i32;
-                    s.kb_layout = Layout::Alpha;
-                    s.kb_shift = false;
+                    s.kb_mode = KeyboardMode::TextLower;
                     s.view = View::Editor { existing: Some(idx) };
                 }
             }
@@ -535,40 +531,42 @@ impl Application for App {
             }
             Msg::HourChange(v) => s.draft_hour = v.clamp(0, 23),
             Msg::MinuteChange(v) => s.draft_minute = v.clamp(0, 55),
-            Msg::DayScroll(y) => s.day_scroll = y,
+            Msg::Scroll(sm) => {
+                let now = Instant::now();
+                let was = s.day_scroll.is_animating();
+                s.day_scroll.apply(sm, now.as_millis());
+                if s.day_scroll.is_animating() && !was {
+                    s.last_tick = now;
+                    return tick_task(Msg::ScrollTick);
+                }
+            }
+            Msg::ScrollTick => {
+                let now = Instant::now();
+                let dt = (now - s.last_tick).as_millis() as u32;
+                s.last_tick = now;
+                s.day_scroll.tick(dt, SnapMode::None, &[]);
+                if s.day_scroll.is_animating() {
+                    return tick_task(Msg::ScrollTick);
+                }
+            }
             Msg::Key(action) => match action {
+                // Uppercase is its own keymap, so the char is already cased.
                 KeyAction::Char(ch) => {
                     if s.draft_label.len() < 32 {
-                        let to_push = if s.kb_layout == Layout::Alpha
-                            && s.kb_shift
-                            && ch.is_ascii_lowercase()
-                        {
-                            s.kb_shift = false;
-                            ch.to_ascii_uppercase()
-                        } else {
-                            ch
-                        };
-                        s.draft_label.push(to_push);
+                        s.draft_label.push(ch);
                     }
                 }
                 KeyAction::Backspace => {
                     s.draft_label.pop();
                 }
-                KeyAction::Shift => s.kb_shift = !s.kb_shift,
-                KeyAction::SwitchLayout => {
-                    s.kb_layout = match s.kb_layout {
-                        Layout::Alpha => Layout::Numeric,
-                        Layout::Numeric => Layout::Alpha,
-                    };
-                    s.kb_shift = false;
+                KeyAction::Mode(m) => s.kb_mode = m,
+                // Single-line label: OK or Enter saves.
+                KeyAction::Ready | KeyAction::Newline => {
+                    return Task::future(async { Msg::Save });
                 }
-                KeyAction::Space => {
-                    if s.draft_label.len() < 32 {
-                        s.draft_label.push(' ');
-                    }
-                }
-                KeyAction::Done => return Task::future(async { Msg::Save }),
                 KeyAction::Cancel => return Task::future(async { Msg::Cancel }),
+                // No cursor in this append-only label field.
+                KeyAction::CursorLeft | KeyAction::CursorRight => {}
             },
             Msg::Save => {
                 if !s.draft_label.is_empty() {

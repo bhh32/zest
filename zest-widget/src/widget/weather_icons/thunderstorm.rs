@@ -6,11 +6,14 @@ pub(crate) fn draw(
     renderer: &mut dyn Renderer<Rgb565>,
     rect: Rectangle,
 ) -> Result<(), RenderError> {
-    cloudy::draw(renderer, rect)?;
+    let (cx, cy, size) = super::anchor(rect);
+    // The bolt is the tallest precipitation, so lift the cloud by half its
+    // height to keep cloud + bolt centered on (cx, cy).
+    let cloud_cy = cy - size / 8;
+    cloudy::draw_at(renderer, Point::new(cx, cloud_cy), size)?;
 
-    let size = rect.size.width.min(rect.size.height) as i32;
-    let card_x = rect.top_left.x + size / 2;
-    let bolt_top = rect.top_left.y + size * 3 / 4;
+    let card_x = cx;
+    let bolt_top = cloud_cy + size / 4;
     let color = Rgb565::CSS_GOLD;
 
     let p1 = Point::new(card_x + size / 12, bolt_top);

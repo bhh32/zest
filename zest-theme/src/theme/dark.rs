@@ -6,7 +6,7 @@
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
 use embedded_graphics::{
-    mono_font::{iso_8859_15::{FONT_10X20, FONT_6X10, FONT_8X13}, MonoFont},
+    mono_font::MonoFont,
     pixelcolor::Rgb888,
 };
 
@@ -27,7 +27,7 @@ const SUCCESS: Rgb888 = Rgb888::new(0x4c, 0xaf, 0x50); // tag-linux / tag-oss
 const DESTRUCTIVE: Rgb888 = Rgb888::new(0xff, 0x55, 0x55);
 const WARNING: Rgb888 = Rgb888::new(0xff, 0xb8, 0x6c);
 
-const DEFAULT_FONT: &MonoFont<'static> = &FONT_8X13;
+const DEFAULT_FONT: &MonoFont<'static> = &crate::font::FONT_ZEST_MONO;
 
 /// The default dark theme. Static const, lives in flash.
 pub const THEME: Theme<'static, Rgb888> = Theme {
@@ -112,7 +112,7 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&FONT_10X20, DEFAULT_FONT, &FONT_6X10),
+    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
     is_dark: true,
     is_high_contrast: false,
 };

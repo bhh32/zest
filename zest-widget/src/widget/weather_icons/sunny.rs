@@ -21,9 +21,8 @@ pub(crate) fn draw(
     renderer: &mut dyn Renderer<Rgb565>,
     rect: Rectangle,
 ) -> Result<(), RenderError> {
-    let center =
-        rect.top_left + Point::new(rect.size.width as i32 / 2, rect.size.height as i32 / 2);
-    let size = rect.size.width.min(rect.size.height) as i32;
+    let (cx, cy, size) = super::anchor(rect);
+    let center = Point::new(cx, cy);
     let body_ray = size / 4;
 
     renderer.fill_circle(center, body_ray as u32, Rgb565::CSS_GOLD)?;
@@ -49,9 +48,20 @@ pub(crate) fn draw_small(
     renderer: &mut dyn Renderer<Rgb565>,
     rect: Rectangle,
 ) -> Result<(), RenderError> {
-    let offset_rect = Rectangle::new(
-        rect.top_left - Point::new(0, rect.size.height as i32 / 8),
-        rect.size * 7 / 10,
+    // A smaller sun nudged up-left of the rect's center, so an overlapping
+    // cloud (PartlyCloudy / Showers) reveals it peeking out while the whole
+    // glyph stays centered. The offset is relative to the shared centered
+    // anchor, not the rect's top-left.
+    let (cx, cy, size) = super::anchor(rect);
+    // Half-size sun nudged up-left of center — small enough that, with the
+    // overlapping cloud, the composition stays inside the rect (no top
+    // clipping) while still reading as a sun peeking out.
+    let edge = size / 2;
+    let scx = cx - size / 6;
+    let scy = cy - size / 6;
+    let sun = Rectangle::new(
+        Point::new(scx - edge / 2, scy - edge / 2),
+        Size::new(edge as u32, edge as u32),
     );
-    draw(renderer, offset_rect)
+    draw(renderer, sun)
 }

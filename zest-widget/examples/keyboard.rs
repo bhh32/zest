@@ -1,4 +1,4 @@
-//! Name greeter — two-state demo of Keyboard input + Done/Cancel handling.
+//! Name greeter — two-state demo of Keyboard input + OK/Cancel handling.
 
 extern crate alloc;
 use alloc::string::String;
@@ -14,7 +14,7 @@ enum Msg {
 }
 
 enum State {
-    Asking { input: String, layout: Layout, shift: bool },
+    Asking { input: String, mode: KeyboardMode },
     Greeting { name: String },
 }
 
@@ -29,8 +29,7 @@ impl Screen {
             theme: convert_theme(&dark::THEME),
             state: State::Asking {
                 input: String::new(),
-                layout: Layout::Alpha,
-                shift: true,
+                mode: KeyboardMode::TextLower,
             },
         }
     }
@@ -38,8 +37,7 @@ impl Screen {
     fn reset(&mut self) {
         self.state = State::Asking {
             input: String::new(),
-            layout: Layout::Alpha,
-            shift: true,
+            mode: KeyboardMode::TextLower,
         };
     }
 }
@@ -55,15 +53,11 @@ impl ScreenView<Rgb565, Msg> for Screen {
 
     fn view(&self) -> Element<'_, Rgb565, Msg> {
         match &self.state {
-            State::Asking { input, layout, shift } => Keyboard::new(
-                "What's your name?",
-                input.clone(),
-                false,
-                *layout,
-                *shift,
-                Msg::Key,
-            )
-            .into_element(),
+            State::Asking { input, mode } => Keyboard::new(*mode, Msg::Key)
+                .title("What's your name?")
+                .input(input.clone())
+                .show_field(true)
+                .into_element(),
             State::Greeting { name } => {
                 let greeting = alloc::format!("Hello, {name}!");
                 Column::new()
@@ -109,47 +103,30 @@ impl Application for App {
                 Task::none()
             }
             Msg::Key(action) => {
-                let State::Asking { input, layout, shift } = &mut s.state else {
+                let State::Asking { input, mode } = &mut s.state else {
                     return Task::none();
                 };
                 match action {
+                    // Uppercase is its own keymap, so the char is already cased.
                     KeyAction::Char(ch) => {
                         if input.len() < MAX_LEN {
-                            let to_push = if *layout == Layout::Alpha
-                                && *shift
-                                && ch.is_ascii_lowercase()
-                            {
-                                *shift = false;
-                                ch.to_ascii_uppercase()
-                            } else {
-                                ch
-                            };
-                            input.push(to_push);
+                            input.push(ch);
                         }
                     }
                     KeyAction::Backspace => {
                         input.pop();
                     }
-                    KeyAction::Shift => *shift = !*shift,
-                    KeyAction::SwitchLayout => {
-                        *layout = match *layout {
-                            Layout::Alpha => Layout::Numeric,
-                            Layout::Numeric => Layout::Alpha,
-                        };
-                        *shift = false;
-                    }
-                    KeyAction::Space => {
-                        if input.len() < MAX_LEN {
-                            input.push(' ');
-                        }
-                    }
-                    KeyAction::Done => {
+                    KeyAction::Mode(m) => *mode = m,
+                    // Single-line field: OK or Enter submits.
+                    KeyAction::Ready | KeyAction::Newline => {
                         let name = core::mem::take(input);
                         if !name.is_empty() {
                             s.state = State::Greeting { name };
                         }
                     }
                     KeyAction::Cancel => s.reset(),
+                    // No cursor in this append-only demo.
+                    KeyAction::CursorLeft | KeyAction::CursorRight => {}
                 }
                 Task::none()
             }

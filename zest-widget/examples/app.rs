@@ -104,8 +104,7 @@ struct MirrorScreen {
     weather_status: String,
     theme: Theme<'static, Rgb565>,
     zip_input: String,
-    kb_layout: Layout,
-    kb_shift: bool,
+    kb_mode: KeyboardMode,
 }
 
 impl MirrorScreen {
@@ -120,8 +119,7 @@ impl MirrorScreen {
             weather_status: "loading weather...".into(),
             theme: convert_theme(&theme::dracula::THEME),
             zip_input: String::new(),
-            kb_layout: Layout::Numeric,
-            kb_shift: false,
+            kb_mode: KeyboardMode::Number,
         }
     }
 
@@ -258,15 +256,11 @@ impl MirrorScreen {
                 &format!("ZIP: {}", self.settings.zip_code),
                 Some(("Edit ZIP", AppMessage::SettingsOpen(SettingsView::ZipEdit))),
             ),
-            SettingsView::ZipEdit => Keyboard::new(
-                "Enter ZIP code",
-                self.zip_input.clone(),
-                false,
-                self.kb_layout,
-                self.kb_shift,
-                AppMessage::Key,
-            )
-            .into_element(),
+            SettingsView::ZipEdit => Keyboard::new(self.kb_mode, AppMessage::Key)
+                .title("Enter ZIP code")
+                .input(self.zip_input.clone())
+                .show_field(true)
+                .into_element(),
             SettingsView::TimeFormat => {
                 let current = if self.settings.time_24h {
                     "24-hour"
@@ -385,8 +379,7 @@ impl Application for App {
             AppMessage::SettingsOpen(view) => {
                 if view == SettingsView::ZipEdit {
                     s.zip_input = s.settings.zip_code.clone();
-                    s.kb_layout = Layout::Numeric;
-                    s.kb_shift = false;
+                    s.kb_mode = KeyboardMode::Number;
                 }
                 s.settings_view = view;
                 Task::none()
@@ -406,20 +399,12 @@ impl Application for App {
                     s.zip_input.pop();
                     Task::none()
                 }
-                KeyAction::Shift => {
-                    s.kb_shift = !s.kb_shift;
+                KeyAction::Mode(m) => {
+                    s.kb_mode = m;
                     Task::none()
                 }
-                KeyAction::SwitchLayout => {
-                    s.kb_layout = match s.kb_layout {
-                        Layout::Alpha => Layout::Numeric,
-                        Layout::Numeric => Layout::Alpha,
-                    };
-                    s.kb_shift = false;
-                    Task::none()
-                }
-                KeyAction::Space => Task::none(),
-                KeyAction::Done => {
+                // OK or Enter submits the ZIP.
+                KeyAction::Ready | KeyAction::Newline => {
                     if s.zip_input.len() == ZIP_MAX_LEN
                         && s.zip_input.chars().all(|c| c.is_ascii_digit())
                     {
@@ -442,6 +427,8 @@ impl Application for App {
                     s.settings_view = SettingsView::Location;
                     Task::none()
                 }
+                // No cursor in this append-only ZIP field.
+                KeyAction::CursorLeft | KeyAction::CursorRight => Task::none(),
             },
             AppMessage::ToggleTimeFormat => {
                 s.settings.time_24h = !s.settings.time_24h;
