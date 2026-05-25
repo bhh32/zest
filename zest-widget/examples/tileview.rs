@@ -105,7 +105,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {
@@ -115,7 +120,12 @@ impl Application for App {
                 Task::none()
             }
             Msg::Scroll(sm) => {
-                if let ScrollMsg::Release { snap_lines, viewport, .. } = &sm {
+                if let ScrollMsg::Release {
+                    snap_lines,
+                    viewport,
+                    ..
+                } = &sm
+                {
                     self.screen.snap_lines = snap_lines.clone();
                     self.screen.viewport = *viewport;
                 }

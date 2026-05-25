@@ -70,11 +70,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             list = list.selected(i);
         }
         for i in 0..30usize {
-            list = list.item_with(
-                Some(">"),
-                format!("Item number {i}"),
-                Some(format!("#{i}")),
-            );
+            list = list.item_with(Some(">"), format!("Item number {i}"), Some(format!("#{i}")));
         }
 
         Column::new()
@@ -96,7 +92,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

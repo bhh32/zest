@@ -18,8 +18,18 @@ use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 
 const OPTIONS: &[&str] = &[
-    "January", "February", "March", "April", "May", "June", "July", "August",
-    "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
 ];
 const ITEM_HEIGHT: u32 = 36;
 
@@ -94,7 +104,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {
@@ -117,8 +132,11 @@ impl Application for App {
                     return tick_task(Msg::ScrollTick);
                 }
                 // Follow the drum as it is dragged.
-                self.screen.selected =
-                    Roller::<Rgb565, Msg>::centered_for(&self.screen.scroll, ITEM_HEIGHT, OPTIONS.len());
+                self.screen.selected = Roller::<Rgb565, Msg>::centered_for(
+                    &self.screen.scroll,
+                    ITEM_HEIGHT,
+                    OPTIONS.len(),
+                );
                 Task::none()
             }
             Msg::ScrollTick => {
@@ -127,8 +145,11 @@ impl Application for App {
                 self.screen.last_tick = now;
                 let lines = self.screen.snap_lines.clone();
                 self.screen.scroll.tick(dt, SnapMode::Center, &lines);
-                self.screen.selected =
-                    Roller::<Rgb565, Msg>::centered_for(&self.screen.scroll, ITEM_HEIGHT, OPTIONS.len());
+                self.screen.selected = Roller::<Rgb565, Msg>::centered_for(
+                    &self.screen.scroll,
+                    ITEM_HEIGHT,
+                    OPTIONS.len(),
+                );
                 if self.screen.scroll.is_animating() {
                     tick_task(Msg::ScrollTick)
                 } else {

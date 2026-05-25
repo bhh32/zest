@@ -77,14 +77,14 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         }
     }
 
-    /// Builder: layout mode (linear ruler or circular gauge).
+    /// Layout mode (linear ruler or circular gauge).
     #[must_use]
     pub fn mode(mut self, mode: ScaleMode) -> Self {
         self.mode = mode;
         self
     }
 
-    /// Builder: number of major divisions (`n` divisions ⇒ `n + 1`
+    /// Number of major divisions (`n` divisions ⇒ `n + 1`
     /// major ticks). Clamped to at least 1.
     #[must_use]
     pub fn major_ticks(mut self, n: u32) -> Self {
@@ -92,35 +92,35 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         self
     }
 
-    /// Builder: minor ticks drawn between each pair of major ticks.
+    /// Minor ticks drawn between each pair of major ticks.
     #[must_use]
     pub fn minor_per_major(mut self, n: u32) -> Self {
         self.minor_per_major = n;
         self
     }
 
-    /// Builder: toggle numeric labels at major ticks.
+    /// Toggle numeric labels at major ticks.
     #[must_use]
     pub fn labels(mut self, on: bool) -> Self {
         self.labels = on;
         self
     }
 
-    /// Builder: starting angle for circular mode (0° points right).
+    /// Starting angle for circular mode (0° points right).
     #[must_use]
     pub fn start_deg(mut self, start_deg: i32) -> Self {
         self.start_deg = start_deg;
         self
     }
 
-    /// Builder: total sweep for circular mode in degrees.
+    /// Total sweep for circular mode in degrees.
     #[must_use]
     pub fn sweep_deg(mut self, sweep_deg: i32) -> Self {
         self.sweep_deg = sweep_deg;
         self
     }
 
-    /// Builder: override tick/baseline color (default:
+    /// Override tick/baseline color (default:
     /// `theme.background.on_base`).
     #[must_use]
     pub fn color(mut self, color: C) -> Self {
@@ -128,28 +128,28 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         self
     }
 
-    /// Builder: override label color (default: `theme.background.divider`).
+    /// Override label color (default: `theme.background.divider`).
     #[must_use]
     pub fn label_color(mut self, color: C) -> Self {
         self.label_color = Some(color);
         self
     }
 
-    /// Builder: override label font (default: `theme.typography.caption`).
+    /// Override label font (default: `theme.typography.caption`).
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.font = Some(font);
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.w = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.h = height.into();
@@ -190,7 +190,9 @@ fn libm_round(v: f32) -> f32 {
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Scale<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let w = self.w.resolve(constraints.max.width, constraints.max.width);
-        let h = self.h.resolve(constraints.max.height, constraints.max.height);
+        let h = self
+            .h
+            .resolve(constraints.max.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -267,10 +269,7 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
             if is_major && self.labels {
                 let major_index = i / (self.minor_per_major + 1);
                 let text = Self::label_for(self.value_at(major_index));
-                let label_y = baseline_y
-                    + major_len
-                    + 2
-                    + font.character_size.height as i32;
+                let label_y = baseline_y + major_len + 2 + font.character_size.height as i32;
                 renderer.draw_text(
                     &text,
                     Point::new(x, label_y),

@@ -11,9 +11,9 @@
 //!
 //! Built entirely from a [`Stack`](crate::Stack):
 //!
-//! 1. **Scrim** (bottom layer) — a full-bleed [`Divider`](crate::Divider)
-//!    used as a solid rect, filled with the theme background tinted toward
-//!    black, so the content beneath shows through dimmed. The scrim also
+//! 1. **Scrim** (bottom layer) — a full-bleed rect filled with the darkest
+//!    neutral (`palette.neutral_10`) so the content reads as dimmed behind
+//!    the modal (the renderer has no alpha). The scrim also
 //!    catches every touch that misses the card, so the widgets behind the
 //!    modal stay inert. A tap on the scrim optionally emits
 //!    [`on_dismiss`](MessageBox::on_dismiss).
@@ -70,21 +70,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> MessageBox<'a, C, M> {
         }
     }
 
-    /// Builder: the card title (drawn in the heading font).
+    /// The card title (drawn in the heading font).
     #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = title.into();
         self
     }
 
-    /// Builder: the card body text.
+    /// The card body text.
     #[must_use]
     pub fn body(mut self, body: impl Into<String>) -> Self {
         self.body = body.into();
         self
     }
 
-    /// Builder: append an action button. Repeatable — buttons are laid out
+    /// Append an action button. Repeatable — buttons are laid out
     /// left-to-right in a row at the bottom of the card. The given message
     /// is emitted when that button is tapped.
     #[must_use]
@@ -93,7 +93,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> MessageBox<'a, C, M> {
         self
     }
 
-    /// Builder: message emitted when the scrim (the area outside the card)
+    /// Message emitted when the scrim (the area outside the card)
     /// is tapped. Without it, taps outside the card are swallowed but emit
     /// nothing (the modal stays open until a button is pressed).
     #[must_use]
@@ -102,7 +102,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> MessageBox<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent of the whole modal region (default
+    /// Width sizing intent of the whole modal region (default
     /// [`Length::Fill`]).
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
@@ -110,7 +110,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> MessageBox<'a, C, M> {
         self
     }
 
-    /// Builder: height sizing intent of the whole modal region (default
+    /// Height sizing intent of the whole modal region (default
     /// [`Length::Fill`]).
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
@@ -286,9 +286,7 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for Scrim<C, M> {
         renderer: &mut dyn Renderer<C>,
         theme: &Theme<'t, C>,
     ) -> Result<(), RenderError> {
-        // Use the darkest neutral as a dimming tint. Without alpha support
-        // in the renderer this is an opaque overlay, which still reads as a
-        // modal backdrop against the lighter card.
+        // Opaque dimming tint — the renderer has no alpha.
         renderer.fill_rect(self.rect, theme.palette.neutral_10)?;
         Ok(())
     }

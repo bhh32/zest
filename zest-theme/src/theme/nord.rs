@@ -1,10 +1,7 @@
 //! Nord — from https://www.nordtheme.com (verified against nord0-nord15 palette).
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
-use embedded_graphics::{
-    mono_font::MonoFont,
-    pixelcolor::Rgb888,
-};
+use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 
 const BG: Rgb888 = Rgb888::new(0x2e, 0x34, 0x40);
 const SURFACE: Rgb888 = Rgb888::new(0x3b, 0x42, 0x52);
@@ -15,7 +12,6 @@ const TEXT_FAINT: Rgb888 = Rgb888::new(0x4c, 0x56, 0x6a);
 const BORDER: Rgb888 = Rgb888::new(0x4c, 0x56, 0x6a);
 const BORDER_LIGHT: Rgb888 = Rgb888::new(0x43, 0x4c, 0x5e);
 const ACCENT: Rgb888 = Rgb888::new(0x88, 0xc0, 0xd0);
-const ACCENT_HOVER: Rgb888 = Rgb888::new(0x8f, 0xbc, 0xbb);
 const ACCENT_PRESSED: Rgb888 = Rgb888::new(0x5e, 0x81, 0xac);
 const SUCCESS: Rgb888 = Rgb888::new(0xa3, 0xbe, 0x8c);
 const SUCCESS_HOVER: Rgb888 = Rgb888::new(0xb5, 0xcc, 0x9d);
@@ -32,9 +28,21 @@ const DEFAULT_FONT: &MonoFont<'static> = &crate::font::FONT_ZEST_MONO;
 
 /// Nord theme.
 pub const THEME: Theme<'static, Rgb888> = Theme {
-    background: Container { base: BG, on_base: TEXT, divider: BORDER_LIGHT },
-    primary: Container { base: SURFACE, on_base: TEXT, divider: BORDER },
-    secondary: Container { base: ELEVATED, on_base: TEXT, divider: BORDER },
+    background: Container {
+        base: BG,
+        on_base: TEXT,
+        divider: BORDER_LIGHT,
+    },
+    primary: Container {
+        base: SURFACE,
+        on_base: TEXT,
+        divider: BORDER,
+    },
+    secondary: Container {
+        base: ELEVATED,
+        on_base: TEXT,
+        divider: BORDER,
+    },
     accent: Component {
         base: ACCENT,
         pressed: ACCENT_PRESSED,
@@ -101,7 +109,12 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
+    typography: crate::Typography::new(
+        &crate::font::FONT_ZEST_MONO_DISPLAY,
+        &crate::font::FONT_ZEST_MONO_HEADING,
+        DEFAULT_FONT,
+        &crate::font::FONT_ZEST_MONO_CAPTION,
+    ),
     is_dark: true,
     is_high_contrast: false,
 };

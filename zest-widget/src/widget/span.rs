@@ -5,8 +5,7 @@
 //! `Vec<Span>` that lays the runs out inline, left to right, wrapping to
 //! the next line at word boundaries when a run would overflow the
 //! arranged width. Each run is painted with its own color and font via
-//! [`Renderer::draw_text`], so a single paragraph can mix, say, a bold
-//! heading font with body text and an accent-colored keyword.
+//! [`Renderer::draw_text`].
 //!
 //! Wrapping is whitespace-based and works per-character for runs without
 //! spaces, using the run font's fixed `character_size` (mono fonts only).
@@ -15,8 +14,7 @@ use super::Widget;
 use alloc::{borrow::Cow, vec::Vec};
 use core::marker::PhantomData;
 use embedded_graphics::{
-    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle,
-    text::Alignment,
+    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::Theme;
@@ -47,14 +45,14 @@ impl<'a, C: PixelColor> Span<'a, C> {
         }
     }
 
-    /// Builder: override this run's color.
+    /// Override this run's color.
     #[must_use]
     pub fn color(mut self, color: C) -> Self {
         self.color = Some(color);
         self
     }
 
-    /// Builder: override this run's font.
+    /// Override this run's font.
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.font = Some(font);
@@ -86,14 +84,14 @@ impl<'a, C: PixelColor, M: Clone> SpanGroup<'a, C, M> {
         }
     }
 
-    /// Builder: append a fully-built [`Span`].
+    /// Append a fully-built [`Span`].
     #[must_use]
     pub fn push(mut self, span: Span<'a, C>) -> Self {
         self.spans.push(span);
         self
     }
 
-    /// Builder: append a plain run by text. Chain `.color(..)` / `.font(..)`
+    /// Append a plain run by text. Chain `.color(..)` / `.font(..)`
     /// via [`Span`] when more control is needed, or use [`SpanGroup::push`].
     #[must_use]
     pub fn span(mut self, text: impl Into<Cow<'a, str>>) -> Self {
@@ -101,21 +99,21 @@ impl<'a, C: PixelColor, M: Clone> SpanGroup<'a, C, M> {
         self
     }
 
-    /// Builder: extra vertical gap between wrapped lines, in pixels.
+    /// Extra vertical gap between wrapped lines, in pixels.
     #[must_use]
     pub fn line_spacing(mut self, spacing: u32) -> Self {
         self.line_spacing = spacing;
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();

@@ -65,28 +65,28 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Container<'a, C, M> {
         }
     }
 
-    /// Builder: padding inset on all sides.
+    /// Padding inset on all sides.
     #[must_use]
     pub fn padding(mut self, padding: u32) -> Self {
         self.padding = padding;
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: set the child widget. The parent will call `arrange`
+    /// Set the child widget. The parent will call `arrange`
     /// later, which propagates the inner rect to the child.
     #[must_use]
     pub fn child<W>(mut self, child: W) -> Self
@@ -97,7 +97,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Container<'a, C, M> {
         self
     }
 
-    /// Builder: make this container scrollable on `dir`. Defaults the
+    /// Make this container scrollable on `dir`. Defaults the
     /// scrollbar to [`ScrollbarMode::Auto`] and no snapping. Pair with
     /// [`Container::scroll_state`] to supply the host's [`ScrollState`].
     #[must_use]
@@ -113,7 +113,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Container<'a, C, M> {
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     /// Implies scrolling (defaults to [`ScrollDirection::Vertical`] if
     /// [`Container::scrollable`] was not called first).
     #[must_use]
@@ -129,7 +129,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Container<'a, C, M> {
         self
     }
 
-    /// Builder: when the scrollbar is drawn. Implies scrolling.
+    /// When the scrollbar is drawn. Implies scrolling.
     #[must_use]
     pub fn scrollbar(mut self, mode: ScrollbarMode) -> Self {
         let core = self.scroll.get_or_insert(ScrollCore {
@@ -143,7 +143,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Container<'a, C, M> {
         self
     }
 
-    /// Builder: snapping mode. Implies scrolling.
+    /// Snapping mode. Implies scrolling.
     #[must_use]
     pub fn snap(mut self, mode: SnapMode) -> Self {
         let core = self.scroll.get_or_insert(ScrollCore {
@@ -157,7 +157,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Container<'a, C, M> {
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Implies
+    /// Callback mapping a [`ScrollMsg`] to the host message. Implies
     /// scrolling.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self

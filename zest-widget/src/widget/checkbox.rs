@@ -17,7 +17,9 @@
 use super::Widget;
 use alloc::{boxed::Box, string::String};
 use core::marker::PhantomData;
-use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment};
+use embedded_graphics::{
+    pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
+};
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::Theme;
 
@@ -55,14 +57,14 @@ impl<'a, C: PixelColor, M: Clone> Checkbox<'a, C, M> {
         }
     }
 
-    /// Builder: trailing label drawn to the right of the box.
+    /// Trailing label drawn to the right of the box.
     #[must_use]
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
     }
 
-    /// Builder: callback invoked with the toggled value (`!checked`) on
+    /// Callback invoked with the toggled value (`!checked`) on
     /// each tap. Without it the check box is disabled and ignores touches.
     #[must_use]
     pub fn on_toggle<F: Fn(bool) -> M + 'a>(mut self, f: F) -> Self {
@@ -70,14 +72,14 @@ impl<'a, C: PixelColor, M: Clone> Checkbox<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -91,9 +93,8 @@ impl<'a, C: PixelColor, M: Clone> Checkbox<'a, C, M> {
     }
 
     fn intrinsic(&self) -> Size {
-        // Approximate label width with a fixed glyph advance so layout is
-        // stable without a theme reference; containers using `Shrink` get
-        // a sensible width and the draw pass aligns text within `rect`.
+        // Approximate label width with a fixed glyph advance — no theme
+        // (font) reference is available at measure time.
         let label_w = self
             .label
             .as_ref()
@@ -102,9 +103,11 @@ impl<'a, C: PixelColor, M: Clone> Checkbox<'a, C, M> {
     }
 
     fn box_rect(&self) -> Rectangle {
-        let y = self.rect.top_left.y
-            + (self.rect.size.height.saturating_sub(BOX_SIZE) / 2) as i32;
-        Rectangle::new(Point::new(self.rect.top_left.x, y), Size::new(BOX_SIZE, BOX_SIZE))
+        let y = self.rect.top_left.y + (self.rect.size.height.saturating_sub(BOX_SIZE) / 2) as i32;
+        Rectangle::new(
+            Point::new(self.rect.top_left.x, y),
+            Size::new(BOX_SIZE, BOX_SIZE),
+        )
     }
 
     fn hit_test(&self, point: Point) -> bool {
@@ -118,7 +121,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let intrinsic = self.intrinsic();
         let w = self.width.resolve(intrinsic.width, constraints.max.width);
-        let h = self.height.resolve(intrinsic.height, constraints.max.height);
+        let h = self
+            .height
+            .resolve(intrinsic.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -173,7 +178,11 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
         let box_rect = self.box_rect();
 
         if self.checked {
-            let fill = if self.pressed { accent.pressed } else { accent.base };
+            let fill = if self.pressed {
+                accent.pressed
+            } else {
+                accent.base
+            };
             renderer.fill_rect(box_rect, fill)?;
             renderer.stroke_rect(box_rect, accent.border)?;
             // Draw a check mark as two strokes forming a tick.
@@ -213,7 +222,13 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
             } else {
                 theme.background.divider
             };
-            renderer.draw_text(label, Point::new(text_x, center_y), font, color, Alignment::Left)?;
+            renderer.draw_text(
+                label,
+                Point::new(text_x, center_y),
+                font,
+                color,
+                Alignment::Left,
+            )?;
         }
 
         Ok(())

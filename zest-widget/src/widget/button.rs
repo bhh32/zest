@@ -16,8 +16,7 @@ use super::Widget;
 use alloc::string::String;
 use core::marker::PhantomData;
 use embedded_graphics::{
-    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle,
-    text::Alignment,
+    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::{ButtonCatalog, ButtonClass, Status, Theme};
@@ -57,28 +56,28 @@ impl<'a, C: PixelColor, M: Clone> Button<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: set the message emitted on release.
+    /// Set the message emitted on release.
     #[must_use]
     pub fn on_press(mut self, msg: M) -> Self {
         self.on_press = Some(msg);
         self
     }
 
-    /// Builder: conditionally set the message. `None` leaves the button
+    /// Conditionally set the message. `None` leaves the button
     /// disabled.
     #[must_use]
     pub fn on_press_maybe(mut self, msg: Option<M>) -> Self {
@@ -86,14 +85,14 @@ impl<'a, C: PixelColor, M: Clone> Button<'a, C, M> {
         self
     }
 
-    /// Builder: replace the label.
+    /// Replace the label.
     #[must_use]
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = label.into();
         self
     }
 
-    /// Builder: select the semantic [`ButtonClass`] (variant). Default
+    /// Select the semantic [`ButtonClass`] (variant). Default
     /// is `Standard`. Use `Suggested` for primary actions,
     /// `Destructive` for delete/cancel, `Text` for tertiary.
     #[must_use]
@@ -102,14 +101,14 @@ impl<'a, C: PixelColor, M: Clone> Button<'a, C, M> {
         self
     }
 
-    /// Builder: override the default font for this instance.
+    /// Override the default font for this instance.
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.font_override = Some(font);
         self
     }
 
-    /// Builder: intrinsic size used by `measure` when constraints are
+    /// Intrinsic size used by `measure` when constraints are
     /// loose.
     #[must_use]
     pub fn intrinsic_size(mut self, size: Size) -> Self {

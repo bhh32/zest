@@ -42,7 +42,11 @@ impl ScreenView<Rgb565, Msg> for Screen {
 
     fn view(&self) -> Element<'_, Rgb565, Msg> {
         let mut label = String::new();
-        let _ = write!(&mut label, "downloading… {}%", (self.progress * 100.0) as i32);
+        let _ = write!(
+            &mut label,
+            "downloading… {}%",
+            (self.progress * 100.0) as i32
+        );
 
         Column::new()
             .spacing(12)
@@ -90,7 +94,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

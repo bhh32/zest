@@ -88,7 +88,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

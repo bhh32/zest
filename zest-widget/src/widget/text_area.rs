@@ -26,9 +26,9 @@
 //!
 //! Rendering is clipped to the arranged rect via
 //! [`push_clip`](Renderer::push_clip) / [`pop_clip`](Renderer::pop_clip).
-//! The first visible line is chosen so the **cursor's line is always
-//! on-screen** (auto-scroll): this is the natural behavior for an editor —
-//! typing at the bottom scrolls the view to follow the caret.
+//! As you type past the last visible row the view scrolls down to keep the
+//! cursor's line within the bottom of the viewport. It does not scroll back
+//! up when the cursor moves above the first visible line.
 //!
 //! # Colors
 //!
@@ -42,8 +42,7 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use embedded_graphics::{
-    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle,
-    text::Alignment,
+    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::Theme;
@@ -110,7 +109,7 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
         }
     }
 
-    /// Builder: cursor position as a **char index** into the text. Values
+    /// Cursor position as a **char index** into the text. Values
     /// past the end are clamped to the char count at draw time.
     #[must_use]
     pub fn cursor(mut self, index: usize) -> Self {
@@ -118,28 +117,28 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
         self
     }
 
-    /// Builder: dimmed placeholder shown when the text is empty.
+    /// Dimmed placeholder shown when the text is empty.
     #[must_use]
     pub fn placeholder(mut self, text: impl Into<Cow<'a, str>>) -> Self {
         self.placeholder = text.into();
         self
     }
 
-    /// Builder: override the text color (default: `theme.background.on_base`).
+    /// Override the text color (default: `theme.background.on_base`).
     #[must_use]
     pub fn color(mut self, color: C) -> Self {
         self.color = Some(color);
         self
     }
 
-    /// Builder: override the cursor bar color (default: `theme.accent.base`).
+    /// Override the cursor bar color (default: `theme.accent.base`).
     #[must_use]
     pub fn cursor_color(mut self, color: C) -> Self {
         self.cursor_color = Some(color);
         self
     }
 
-    /// Builder: override the placeholder color (default:
+    /// Override the placeholder color (default:
     /// `theme.background.divider`).
     #[must_use]
     pub fn placeholder_color(mut self, color: C) -> Self {
@@ -147,7 +146,7 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
         self
     }
 
-    /// Builder: override the font (default: `theme.default_font`). Must be a
+    /// Override the font (default: `theme.default_font()`). Must be a
     /// mono font; wrapping relies on `character_size.width`.
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
@@ -155,7 +154,7 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
         self
     }
 
-    /// Builder: callback receiving the nearest char index when the area is
+    /// Callback receiving the nearest char index when the area is
     /// tapped. Without it, taps are ignored. The host typically stores the
     /// returned index as its new cursor position.
     ///
@@ -168,14 +167,14 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -294,8 +293,8 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
         point.x >= tl.x && point.x < br.x && point.y >= tl.y && point.y < br.y
     }
 
-    /// Map a touched point to the nearest char index, accounting for the
-    /// current vertical auto-scroll offset (`first_line`).
+    /// Map a touched point to the nearest char index, using the same first
+    /// visible line as the draw pass.
     fn index_at(&self, point: Point, font: &MonoFont<'_>) -> usize {
         let lines = self.layout_lines(font);
         if lines.is_empty() {
@@ -354,7 +353,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
     }
 
     fn handle_touch(&mut self, point: Point, phase: TouchPhase) -> Option<M> {
-        let cb = self.on_tap.as_ref()?;
+        let on_tap = self.on_tap.as_ref()?;
         if phase != TouchPhase::Down || !self.hit_test(point) {
             return None;
         }
@@ -364,7 +363,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
         // Without one the tap is ignored — set `.font(...)` to enable it
         // (the example does). The font is identical to the one used at draw.
         let font = self.font?;
-        Some(cb(self.index_at(point, font)))
+        Some(on_tap(self.index_at(point, font)))
     }
 
     fn draw<'t>(
@@ -387,9 +386,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
         // Empty text → dimmed placeholder + a cursor at the start.
         if self.text.is_empty() {
             if !self.placeholder.is_empty() {
-                let ph_color = self
-                    .placeholder_color
-                    .unwrap_or(theme.background.divider);
+                let ph_color = self.placeholder_color.unwrap_or(theme.background.divider);
                 renderer.draw_text(
                     &self.placeholder,
                     Point::new(x0, y0 + gh),
@@ -413,12 +410,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
 
         // Draw the visible window of lines. Baseline is one glyph height
         // below the top of each row (matching `Text`'s top alignment).
-        for (row, line) in lines
-            .iter()
-            .enumerate()
-            .skip(first_line)
-            .take(rows)
-        {
+        for (row, line) in lines.iter().enumerate().skip(first_line).take(rows) {
             let slice = &self.text[line.start..line.end];
             if !slice.is_empty() {
                 let draw_y = y0 + (row - first_line) as i32 * gh + gh;
@@ -438,8 +430,10 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
         if cursor_line >= first_line && cursor_line < first_line + rows {
             let cx = x0 + cursor_col as i32 * gw;
             let cy = y0 + (cursor_line - first_line) as i32 * gh;
-            let cursor_rect =
-                Rectangle::new(Point::new(cx, cy + 2), Size::new(CURSOR_W, gh.max(1) as u32));
+            let cursor_rect = Rectangle::new(
+                Point::new(cx, cy + 2),
+                Size::new(CURSOR_W, gh.max(1) as u32),
+            );
             renderer.fill_rect(cursor_rect, cursor_color)?;
         }
 

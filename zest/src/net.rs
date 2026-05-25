@@ -64,7 +64,10 @@ where
 /// `user_agent` is a polite identifier for shared services like
 /// `api.weather.gov` that require one. Convenience over the more
 /// general [`spawn_blocking`].
-pub async fn http_get_json<T>(url: impl Into<String>, user_agent: &'static str) -> Result<T, NetError>
+pub async fn http_get_json<T>(
+    url: impl Into<String>,
+    user_agent: &'static str,
+) -> Result<T, NetError>
 where
     T: DeserializeOwned + Send + 'static,
 {

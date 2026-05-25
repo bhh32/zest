@@ -41,42 +41,42 @@ impl<'a, C: PixelColor, M: Clone> Text<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: horizontal alignment within the arranged rect.
+    /// Horizontal alignment within the arranged rect.
     #[must_use]
     pub fn align_x(mut self, h: Horizontal) -> Self {
         self.align_x = h;
         self
     }
 
-    /// Builder: vertical alignment within the arranged rect.
+    /// Vertical alignment within the arranged rect.
     #[must_use]
     pub fn align_y(mut self, v: Vertical) -> Self {
         self.align_y = v;
         self
     }
 
-    /// Builder: override foreground color (default: `theme.background.on_base`).
+    /// Override foreground color (default: `theme.background.on_base`).
     #[must_use]
     pub fn color(mut self, c: C) -> Self {
         self.color = Some(c);
         self
     }
 
-    /// Builder: override font (default: `theme.default_font`).
+    /// Override font (default: `theme.default_font`).
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.font = Some(font);
@@ -87,7 +87,9 @@ impl<'a, C: PixelColor, M: Clone> Text<'a, C, M> {
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Text<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let intrinsic_w = self.font.map_or(0, |f| {
-            f.character_size.width.saturating_mul(self.content.chars().count() as u32)
+            f.character_size
+                .width
+                .saturating_mul(self.content.chars().count() as u32)
         });
         let intrinsic_h = self.font.map_or(0, |f| f.character_size.height);
         let w = self.width.resolve(intrinsic_w, constraints.max.width);

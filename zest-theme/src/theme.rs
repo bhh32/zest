@@ -10,9 +10,8 @@ use embedded_graphics::{mono_font::MonoFont, pixelcolor::PixelColor};
 /// widgets at draw time.
 ///
 /// Widgets do not reach into the per-role component fields directly —
-/// they go through the catalog traits ([`ButtonCatalog`], etc.) so a
-/// future redesign of the palette doesn't ripple through every widget
-/// implementation.
+/// they go through the catalog traits ([`ButtonCatalog`], etc.), so changing
+/// the palette doesn't ripple through every widget implementation.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Theme<'a, C: PixelColor> {
     // ---- Regions --------------------------------------------------------
@@ -48,7 +47,7 @@ pub struct Theme<'a, C: PixelColor> {
     pub corner_radii: CornerRadii,
 
     // ---- Typography -----------------------------------------------------
-    /// Three-role mono font scale (heading / body / caption).
+    /// Four-role mono font scale (display / heading / body / caption).
     pub typography: Typography<'a>,
 
     // ---- Flags ----------------------------------------------------------

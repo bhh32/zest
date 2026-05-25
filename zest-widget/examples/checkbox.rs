@@ -48,12 +48,16 @@ impl ScreenView<Rgb565, Msg> for Screen {
         let _ = write!(
             &mut summary,
             "checked: {}",
-            [("Wi-Fi", self.a), ("Bluetooth", self.b), ("Airplane", self.c)]
-                .iter()
-                .filter(|(_, on)| *on)
-                .map(|(n, _)| *n)
-                .collect::<alloc::vec::Vec<_>>()
-                .join(", ")
+            [
+                ("Wi-Fi", self.a),
+                ("Bluetooth", self.b),
+                ("Airplane", self.c)
+            ]
+            .iter()
+            .filter(|(_, on)| *on)
+            .map(|(n, _)| *n)
+            .collect::<alloc::vec::Vec<_>>()
+            .join(", ")
         );
 
         Column::new()
@@ -103,7 +107,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

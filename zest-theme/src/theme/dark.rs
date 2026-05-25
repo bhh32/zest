@@ -5,10 +5,7 @@
 //! This is the **default theme** for zest applications.
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
-use embedded_graphics::{
-    mono_font::MonoFont,
-    pixelcolor::Rgb888,
-};
+use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 
 // ---- Website palette ---------------------------------------------------
 const BG: Rgb888 = Rgb888::new(0x0e, 0x0e, 0x10);
@@ -20,7 +17,6 @@ const TEXT: Rgb888 = Rgb888::new(0xea, 0xe8, 0xe2);
 const TEXT_MUTED: Rgb888 = Rgb888::new(0x8a, 0x88, 0x80);
 const TEXT_FAINT: Rgb888 = Rgb888::new(0x42, 0x40, 0x4a);
 const ACCENT: Rgb888 = Rgb888::new(0xe0, 0x7b, 0x39);
-const ACCENT_HOVER: Rgb888 = Rgb888::new(0xf0, 0x8c, 0x4a);
 
 // ---- Semantic colors (chosen for visual harmony with the accent) ------
 const SUCCESS: Rgb888 = Rgb888::new(0x4c, 0xaf, 0x50); // tag-linux / tag-oss
@@ -103,7 +99,7 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
         neutral_6: TEXT_FAINT,
         neutral_8: BORDER,
         neutral_10: BG,
-        accent_blue: Rgb888::new(0x82, 0xcf, 0xff),    // tag-bevy
+        accent_blue: Rgb888::new(0x82, 0xcf, 0xff), // tag-bevy
         accent_green: SUCCESS,
         accent_red: DESTRUCTIVE,
         accent_yellow: WARNING,
@@ -112,7 +108,12 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
+    typography: crate::Typography::new(
+        &crate::font::FONT_ZEST_MONO_DISPLAY,
+        &crate::font::FONT_ZEST_MONO_HEADING,
+        DEFAULT_FONT,
+        &crate::font::FONT_ZEST_MONO_CAPTION,
+    ),
     is_dark: true,
     is_high_contrast: false,
 };

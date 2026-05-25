@@ -1,3 +1,5 @@
+//! The async event loop that drives an [`Application`](crate::Application).
+
 use crate::application::{Application, Subscription, Task};
 use crate::event::{InputEvent, TouchPhase};
 use crate::platform::Platform;
@@ -7,16 +9,21 @@ use core::marker::PhantomData;
 use embassy_futures::select::{Either3, select3};
 use embedded_graphics::{prelude::*, primitives::Rectangle};
 
+/// Drives an [`Application`](crate::Application)'s event loop on a
+/// [`Platform`](crate::Platform).
 pub struct Runtime<A: Application> {
     _ph: PhantomData<A>,
 }
 
 impl<A: Application> Runtime<A> {
+    /// Create a runtime for application type `A`.
     #[must_use]
     pub fn new() -> Self {
         Self { _ph: PhantomData }
     }
 
+    /// Run the application event loop on `platform`: poll input, drive
+    /// `update` and subscriptions, and redraw on demand. Does not return.
     pub async fn run<P>(self, mut platform: P)
     where
         P: Platform<Color = A::Color>,
@@ -53,12 +60,8 @@ impl<A: Application> Runtime<A> {
                     })
                     .await;
 
-                let outcome = select3(
-                    platform.next_event(),
-                    pending.next(),
-                    subscription.next(),
-                )
-                .await;
+                let outcome =
+                    select3(platform.next_event(), pending.next(), subscription.next()).await;
 
                 match outcome {
                     Either3::First(None) => return,

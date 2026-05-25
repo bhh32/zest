@@ -1,3 +1,9 @@
+//! Compact weather-condition glyphs drawn from renderer primitives.
+//!
+//! Each [`WeatherCondition`] maps to a small vector glyph that fills its
+//! arranged rect, centered on a shared square anchor so a row of mixed
+//! conditions lines up on one visual center.
+
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*, primitives::Rectangle};
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, Widget};
 use zest_theme::Theme;
@@ -76,9 +82,20 @@ mod tests {
             self.0.add(ctr.x - r, ctr.y - r, ctr.x + r, ctr.y + r);
             Ok(())
         }
-        fn stroke_line(&mut self, a: Point, b: Point, _: Rgb565, w: u32) -> Result<(), RenderError> {
+        fn stroke_line(
+            &mut self,
+            a: Point,
+            b: Point,
+            _: Rgb565,
+            w: u32,
+        ) -> Result<(), RenderError> {
             let w = w as i32;
-            self.0.add(a.x.min(b.x) - w, a.y.min(b.y) - w, a.x.max(b.x) + w, a.y.max(b.y) + w);
+            self.0.add(
+                a.x.min(b.x) - w,
+                a.y.min(b.y) - w,
+                a.x.max(b.x) + w,
+                a.y.max(b.y) + w,
+            );
             Ok(())
         }
         fn draw_text(
@@ -89,14 +106,18 @@ mod tests {
             _: Rgb565,
             _: Alignment,
         ) -> Result<(), RenderError> {
-            let hw = text.chars().count() as i32 * font.character_size.width as i32 / 2;
-            self.0
-                .add(pos.x - hw, pos.y - font.baseline as i32, pos.x + hw, pos.y);
+            let half_w = text.chars().count() as i32 * font.character_size.width as i32 / 2;
+            self.0.add(
+                pos.x - half_w,
+                pos.y - font.baseline as i32,
+                pos.x + half_w,
+                pos.y,
+            );
             Ok(())
         }
     }
 
-    fn bb(f: impl FnOnce(&mut Rec), rect: Rectangle) -> Bbox {
+    fn bb(f: impl FnOnce(&mut Rec)) -> Bbox {
         let mut r = Rec(Bbox::default());
         f(&mut r);
         r.0
@@ -133,29 +154,26 @@ mod tests {
                 );
             };
             // Single-element glyphs share the anchor tightly.
-            check("sunny", bb(|r| sunny::draw(r, rect).unwrap(), rect), 4);
-            check("cloudy", bb(|r| cloudy::draw(r, rect).unwrap(), rect), 4);
-            check("rain", bb(|r| rain::draw(r, rect).unwrap(), rect), 4);
-            check("snow", bb(|r| snow::draw(r, rect).unwrap(), rect), 4);
-            check("thunder", bb(|r| thunderstorm::draw(r, rect).unwrap(), rect), 4);
-            check("fog", bb(|r| fog::draw(r, rect).unwrap(), rect), 4);
-            check("windy", bb(|r| windy::draw(r, rect).unwrap(), rect), 4);
-            check("unknown", bb(|r| unknown::draw(r, rect).unwrap(), rect), 4);
+            check("sunny", bb(|r| sunny::draw(r, rect).unwrap()), 4);
+            check("cloudy", bb(|r| cloudy::draw(r, rect).unwrap()), 4);
+            check("rain", bb(|r| rain::draw(r, rect).unwrap()), 4);
+            check("snow", bb(|r| snow::draw(r, rect).unwrap()), 4);
+            check("thunder", bb(|r| thunderstorm::draw(r, rect).unwrap()), 4);
+            check("fog", bb(|r| fog::draw(r, rect).unwrap()), 4);
+            check("windy", bb(|r| windy::draw(r, rect).unwrap()), 4);
+            check("unknown", bb(|r| unknown::draw(r, rect).unwrap()), 4);
             // Sun+cloud compositions are intentionally a touch asymmetric, but
             // must still center reasonably and not spill the square.
             check(
                 "partly",
-                bb(
-                    |r| {
-                        sunny::draw_small(r, rect).unwrap();
-                        let (cx, cy, size) = anchor(rect);
-                        cloudy::draw_at(r, Point::new(cx, cy + size / 12), size).unwrap();
-                    },
-                    rect,
-                ),
+                bb(|r| {
+                    sunny::draw_small(r, rect).unwrap();
+                    let (cx, cy, size) = anchor(rect);
+                    cloudy::draw_at(r, Point::new(cx, cy + size / 12), size).unwrap();
+                }),
                 8,
             );
-            check("showers", bb(|r| showers::draw(r, rect).unwrap(), rect), 8);
+            check("showers", bb(|r| showers::draw(r, rect).unwrap()), 8);
         }
     }
 }
@@ -206,14 +224,14 @@ impl WeatherIcon {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -248,7 +266,9 @@ impl<M: Clone> Widget<Rgb565, M> for WeatherIcon {
     }
 
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self
             .height
             .resolve(constraints.max.height, constraints.max.height);

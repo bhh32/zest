@@ -33,28 +33,28 @@ impl<C: PixelColor, M: Clone> Divider<C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: explicit color (default: `theme.background.divider`).
+    /// Explicit color (default: `theme.background.divider`).
     #[must_use]
     pub fn color(mut self, color: C) -> Self {
         self.color = Some(color);
         self
     }
 
-    /// Builder: set the thin-axis thickness. For a horizontal divider
+    /// Set the thin-axis thickness. For a horizontal divider
     /// this is the height; for a vertical divider, the width. Chooses
     /// the smaller of the current two axes as the "thin" one.
     #[must_use]

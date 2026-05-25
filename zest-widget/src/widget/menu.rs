@@ -55,7 +55,7 @@ impl<C: PixelColor, M: Clone> Menu<C, M> {
         }
     }
 
-    /// Builder: append an entry with the message emitted when it is tapped.
+    /// Append an entry with the message emitted when it is tapped.
     #[must_use]
     pub fn entry(mut self, label: impl Into<String>, message: M) -> Self {
         self.entries.push(Entry {
@@ -65,28 +65,28 @@ impl<C: PixelColor, M: Clone> Menu<C, M> {
         self
     }
 
-    /// Builder: index of the currently-selected entry (highlighted).
+    /// Index of the currently-selected entry (highlighted).
     #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = Some(index);
         self
     }
 
-    /// Builder: per-row height in pixels (default 30).
+    /// Per-row height in pixels (default 30).
     #[must_use]
     pub fn row_height(mut self, h: u32) -> Self {
         self.row_h = h.max(1);
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, w: impl Into<Length>) -> Self {
         self.width = w.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, h: impl Into<Length>) -> Self {
         self.height = h.into();
@@ -123,7 +123,9 @@ impl<C: PixelColor, M: Clone> Default for Menu<C, M> {
 impl<C: PixelColor, M: Clone> Widget<C, M> for Menu<C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let intrinsic_h = self.row_h * self.entries.len() as u32;
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self.height.resolve(intrinsic_h, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
@@ -166,6 +168,7 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for Menu<C, M> {
     }
 
     fn mark_pressed(&mut self, point: Point) {
+        // Don't overwrite a press already recorded earlier this frame.
         if self.pressed.is_none() {
             self.pressed = self.row_at(point);
         }

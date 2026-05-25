@@ -1,10 +1,7 @@
 //! Light theme — warm-inverse of the website palette with contrast-adjusted accent.
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
-use embedded_graphics::{
-    mono_font::MonoFont,
-    pixelcolor::Rgb888,
-};
+use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 
 const BG: Rgb888 = Rgb888::new(0xf7, 0xf6, 0xf2);
 const SURFACE: Rgb888 = Rgb888::new(0xef, 0xee, 0xe8);
@@ -15,7 +12,6 @@ const TEXT_FAINT: Rgb888 = Rgb888::new(0x98, 0x94, 0x88);
 const BORDER: Rgb888 = Rgb888::new(0xc8, 0xc5, 0xb8);
 const BORDER_LIGHT: Rgb888 = Rgb888::new(0xdc, 0xd9, 0xcf);
 const ACCENT: Rgb888 = Rgb888::new(0xc2, 0x5e, 0x1e);
-const ACCENT_HOVER: Rgb888 = Rgb888::new(0xa6, 0x4d, 0x12);
 const ACCENT_PRESSED: Rgb888 = Rgb888::new(0x8a, 0x3f, 0x0e);
 const SUCCESS: Rgb888 = Rgb888::new(0x3e, 0x8e, 0x41);
 const SUCCESS_HOVER: Rgb888 = Rgb888::new(0x2e, 0x6b, 0x30);
@@ -32,9 +28,21 @@ const DEFAULT_FONT: &MonoFont<'static> = &crate::font::FONT_ZEST_MONO;
 
 /// Light theme.
 pub const THEME: Theme<'static, Rgb888> = Theme {
-    background: Container { base: BG, on_base: TEXT, divider: BORDER_LIGHT },
-    primary: Container { base: SURFACE, on_base: TEXT, divider: BORDER },
-    secondary: Container { base: ELEVATED, on_base: TEXT, divider: BORDER },
+    background: Container {
+        base: BG,
+        on_base: TEXT,
+        divider: BORDER_LIGHT,
+    },
+    primary: Container {
+        base: SURFACE,
+        on_base: TEXT,
+        divider: BORDER,
+    },
+    secondary: Container {
+        base: ELEVATED,
+        on_base: TEXT,
+        divider: BORDER,
+    },
     accent: Component {
         base: ACCENT,
         pressed: ACCENT_PRESSED,
@@ -101,7 +109,12 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
+    typography: crate::Typography::new(
+        &crate::font::FONT_ZEST_MONO_DISPLAY,
+        &crate::font::FONT_ZEST_MONO_HEADING,
+        DEFAULT_FONT,
+        &crate::font::FONT_ZEST_MONO_CAPTION,
+    ),
     is_dark: false,
     is_high_contrast: false,
 };

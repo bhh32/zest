@@ -99,28 +99,28 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
         }
     }
 
-    /// Builder: replace all options from a slice of string slices.
+    /// Replace all options from a slice of string slices.
     #[must_use]
     pub fn options(mut self, options: &[&str]) -> Self {
         self.options = options.iter().map(|s| String::from(*s)).collect();
         self
     }
 
-    /// Builder: append a single option label.
+    /// Append a single option label.
     #[must_use]
     pub fn option(mut self, label: impl Into<String>) -> Self {
         self.options.push(label.into());
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     #[must_use]
     pub fn scroll_state(mut self, state: &ScrollState) -> Self {
         self.state = *state;
         self
     }
 
-    /// Builder: the host's currently selected option index. Used to colour the
+    /// The host's currently selected option index. Used to colour the
     /// centered row at rest before any scroll has happened.
     #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
@@ -128,14 +128,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
         self
     }
 
-    /// Builder: pixel height of one option row (default 36).
+    /// Pixel height of one option row (default 36).
     #[must_use]
     pub fn item_height(mut self, height: u32) -> Self {
         self.item_height = height.max(1);
         self
     }
 
-    /// Builder: number of rows shown in the viewport (default 5). Kept odd so
+    /// Number of rows shown in the viewport (default 5). Kept odd so
     /// exactly one row sits under the highlight band.
     #[must_use]
     pub fn visible_count(mut self, count: u32) -> Self {
@@ -143,21 +143,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
         self
     }
 
-    /// Builder: override the option font (defaults to `theme.typography.body`).
+    /// Override the option font (defaults to `theme.typography.body`).
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.font = Some(font);
         self
     }
 
-    /// Builder: width sizing intent (height is driven by `visible * item_height`).
+    /// Width sizing intent (height is driven by `visible * item_height`).
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Apply the
+    /// Callback mapping a [`ScrollMsg`] to the host message. Apply the
     /// message to the owned [`ScrollState`] in `update()`.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
@@ -168,7 +168,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
         self
     }
 
-    /// Builder: callback fired with the centered option index whenever it
+    /// Callback fired with the centered option index whenever it
     /// changes (during drag, fling, or settle).
     #[must_use]
     pub fn on_select<F>(mut self, f: F) -> Self
@@ -208,8 +208,8 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
             return 0;
         }
         let off = scroll_core::render_offset(self.state, ScrollDirection::Vertical).y;
-        let ih = self.item_height as i32;
-        let raw = (off + ih / 2).div_euclid(ih);
+        let item_h = self.item_height as i32;
+        let raw = (off + item_h / 2).div_euclid(item_h);
         raw.clamp(0, self.options.len() as i32 - 1) as usize
     }
 }
@@ -230,7 +230,10 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
     }
 
     fn preferred_size(&self) -> (Length, Length) {
-        (self.width, Length::Fixed(self.item_height.saturating_mul(self.visible)))
+        (
+            self.width,
+            Length::Fixed(self.item_height.saturating_mul(self.visible)),
+        )
     }
 
     fn arrange(&mut self, rect: Rectangle) {
@@ -258,7 +261,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
         // panning and fling are untouched.
         let off = scroll_core::render_offset(self.state, ScrollDirection::Vertical).y;
         let band_top = viewport.top_left.y + self.pad();
-        let ih = self.item_height as i32;
+        let item_h = self.item_height as i32;
         let on_select = self.on_select.as_deref();
         let count = self.options.len();
         scroll_core::route_touch(
@@ -279,7 +282,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
                 if content_y < 0 {
                     return None;
                 }
-                let idx = (content_y / ih) as usize;
+                let idx = (content_y / item_h) as usize;
                 if idx >= count {
                     return None;
                 }
@@ -298,7 +301,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
         let font = self.font.unwrap_or(theme.typography.body);
         let viewport = self.rect;
         let off = scroll_core::render_offset(self.state, ScrollDirection::Vertical).y;
-        let ih = self.item_height as i32;
+        let item_h = self.item_height as i32;
         let glyph_h = font.character_size.height as i32;
         let center_x = viewport.top_left.x + viewport.size.width as i32 / 2;
         let band_top = viewport.top_left.y + self.pad();
@@ -319,7 +322,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
             theme.accent.base,
             1,
         )?;
-        let band_bot = band_top + ih;
+        let band_bot = band_top + item_h;
         renderer.stroke_line(
             Point::new(viewport.top_left.x, band_bot),
             Point::new(viewport.top_left.x + viewport.size.width as i32, band_bot),
@@ -329,18 +332,18 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
 
         // Each option's row top in screen space: leading pad, minus scroll.
         for (i, label) in self.options.iter().enumerate() {
-            let row_top = band_top + i as i32 * ih - off;
+            let row_top = band_top + i as i32 * item_h - off;
             // Cull rows fully outside the viewport.
-            if row_top + ih <= viewport.top_left.y
+            if row_top + item_h <= viewport.top_left.y
                 || row_top >= viewport.top_left.y + viewport.size.height as i32
             {
                 continue;
             }
-            let baseline_y = row_top + ih / 2 + glyph_h / 3;
+            let baseline_y = row_top + item_h / 2 + glyph_h / 3;
             let color = if i == centered {
                 theme.background.on_base
             } else {
-                // Dim non-centered rows toward the divider tone.
+                // Non-centered rows use the divider color.
                 theme.background.divider
             };
             renderer.draw_text(
@@ -371,8 +374,8 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
             return 0;
         }
         let off = scroll_core::render_offset(*state, ScrollDirection::Vertical).y;
-        let ih = item_height.max(1) as i32;
-        let raw = (off + ih / 2).div_euclid(ih);
+        let item_h = item_height.max(1) as i32;
+        let raw = (off + item_h / 2).div_euclid(item_h);
         raw.clamp(0, count as i32 - 1) as usize
     }
 

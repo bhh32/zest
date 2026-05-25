@@ -47,7 +47,7 @@ impl<C: PixelColor, M: Clone> ProgressBar<C, M> {
         }
     }
 
-    /// Builder: inclusive value range mapped to the fill fraction.
+    /// Inclusive value range mapped to the fill fraction.
     #[must_use]
     pub fn range(mut self, min: f32, max: f32) -> Self {
         self.min = min;
@@ -55,21 +55,21 @@ impl<C: PixelColor, M: Clone> ProgressBar<C, M> {
         self
     }
 
-    /// Builder: explicit fill color (default: `theme.accent.base`).
+    /// Explicit fill color (default: `theme.accent.base`).
     #[must_use]
     pub fn color(mut self, color: C) -> Self {
         self.color = Some(color);
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -121,7 +121,8 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for ProgressBar<C, M> {
         let fill_w = (self.rect.size.width as f32 * self.fraction()) as u32;
         if fill_w > 0 {
             let fill_color = self.color.unwrap_or(theme.accent.base);
-            let filled = Rectangle::new(self.rect.top_left, Size::new(fill_w, self.rect.size.height));
+            let filled =
+                Rectangle::new(self.rect.top_left, Size::new(fill_w, self.rect.size.height));
             renderer.fill_rect(filled, fill_color)?;
         }
 

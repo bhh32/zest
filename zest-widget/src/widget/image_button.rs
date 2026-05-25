@@ -4,9 +4,10 @@
 //! Interaction mirrors [`Button`](super::button::Button): the press
 //! registers on [`TouchPhase::Down`] (sets `pressed`, emits no message),
 //! and the message fires on [`TouchPhase::Up`] if `pressed` is still set.
-//! The runtime rehydrates `pressed` each frame from `pressed_at` via
-//! [`mark_pressed`](Widget::mark_pressed), so the press persists across
-//! the Down/Up gesture and drag-off-to-cancel works.
+//! The runtime re-marks `pressed` each frame via
+//! [`mark_pressed`](Widget::mark_pressed), so the press survives the Down/Up
+//! gesture; dragging off before release cancels it, since a press that no
+//! longer lands isn't re-asserted on the next rebuild.
 //!
 //! Styling is resolved through the theme's [`ButtonCatalog`] using the
 //! widget's [`ButtonClass`] and current [`Status`], exactly like
@@ -18,8 +19,7 @@ use super::Widget;
 use alloc::string::String;
 use core::marker::PhantomData;
 use embedded_graphics::{
-    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle,
-    text::Alignment,
+    mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::{ButtonCatalog, ButtonClass, Status, Theme};
@@ -61,28 +61,28 @@ impl<'a, C: PixelColor, M: Clone> ImageButton<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: set the message emitted on release.
+    /// Set the message emitted on release.
     #[must_use]
     pub fn on_press(mut self, msg: M) -> Self {
         self.on_press = Some(msg);
         self
     }
 
-    /// Builder: conditionally set the message. `None` leaves the button
+    /// Conditionally set the message. `None` leaves the button
     /// disabled.
     #[must_use]
     pub fn on_press_maybe(mut self, msg: Option<M>) -> Self {
@@ -90,14 +90,14 @@ impl<'a, C: PixelColor, M: Clone> ImageButton<'a, C, M> {
         self
     }
 
-    /// Builder: add a text label drawn beneath the image.
+    /// Add a text label drawn beneath the image.
     #[must_use]
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
     }
 
-    /// Builder: select the semantic [`ButtonClass`]. Default is
+    /// Select the semantic [`ButtonClass`]. Default is
     /// `Standard`.
     #[must_use]
     pub fn class(mut self, class: ButtonClass) -> Self {
@@ -105,7 +105,7 @@ impl<'a, C: PixelColor, M: Clone> ImageButton<'a, C, M> {
         self
     }
 
-    /// Builder: override the default font for the label.
+    /// Override the default font for the label.
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.font_override = Some(font);
@@ -132,7 +132,6 @@ impl<'a, C: PixelColor, M: Clone> ImageButton<'a, C, M> {
         self.font_override.unwrap_or(theme.default_font())
     }
 
-
     fn hit_test(&self, point: Point) -> bool {
         let top_left = self.rect.top_left;
         let bot_right =
@@ -154,7 +153,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for ImageButton<'a, C, M> {
             self.image_size.height + label_h + 16,
         );
         let w = self.width.resolve(intrinsic.width, constraints.max.width);
-        let h = self.height.resolve(intrinsic.height, constraints.max.height);
+        let h = self
+            .height
+            .resolve(intrinsic.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -231,7 +232,8 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for ImageButton<'a, C, M> {
 
         if let Some(label) = &self.label {
             let center_x = self.rect.top_left.x + self.rect.size.width as i32 / 2;
-            let baseline_y = top + self.image_size.height as i32 + font.character_size.height as i32;
+            let baseline_y =
+                top + self.image_size.height as i32 + font.character_size.height as i32;
             renderer.draw_text(
                 label,
                 Point::new(center_x, baseline_y),

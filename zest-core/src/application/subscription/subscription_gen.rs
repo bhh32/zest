@@ -1,3 +1,5 @@
+//! [`SubscriptionGen`]: the boxed closure that yields a subscription's futures.
+
 use alloc::boxed::Box;
 
 use crate::application::BoxFuture;

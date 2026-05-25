@@ -105,16 +105,20 @@ impl<'a, C: PixelColor, M: Clone> TableRow<'a, C, M> {
         if point.x < tl.x || point.x >= br.x || point.y < tl.y || point.y >= br.y {
             return None;
         }
-        let cw = self.col_width().max(1) as i32;
-        let col = ((point.x - tl.x) / cw) as usize;
+        let col_w = self.col_width().max(1) as i32;
+        let col = ((point.x - tl.x) / col_w) as usize;
         Some(col.min(self.columns.saturating_sub(1)))
     }
 }
 
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TableRow<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
-        let h = self.height.resolve(TABLE_ROW_HEIGHT, constraints.max.height);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
+        let h = self
+            .height
+            .resolve(TABLE_ROW_HEIGHT, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -179,15 +183,15 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TableRow<'a, C, M> {
         };
         renderer.fill_rect(self.rect, bg)?;
 
-        let cw = self.col_width();
+        let col_w = self.col_width();
         let glyph_h = font.character_size.height as i32;
         let baseline_y = self.rect.top_left.y + self.rect.size.height as i32 / 2 + glyph_h / 3;
 
         for col in 0..self.columns {
-            let cell_x = self.rect.top_left.x + (cw * col as u32) as i32;
+            let cell_x = self.rect.top_left.x + (col_w * col as u32) as i32;
             let cell_rect = Rectangle::new(
                 Point::new(cell_x, self.rect.top_left.y),
-                Size::new(cw, self.rect.size.height),
+                Size::new(col_w, self.rect.size.height),
             );
 
             // Pressed/selected cell highlight.
@@ -290,21 +294,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: the header row, drawn above (and outside) the scrolling body.
+    /// The header row, drawn above (and outside) the scrolling body.
     #[must_use]
     pub fn header(mut self, cells: &'a [&'a str]) -> Self {
         self.columns = self.columns.max(cells.len());
@@ -312,7 +316,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: replace all body rows at once from a borrowed 2-D slice.
+    /// Replace all body rows at once from a borrowed 2-D slice.
     #[must_use]
     pub fn rows(mut self, rows: &'a [&'a [&'a str]]) -> Self {
         self.body.clear();
@@ -323,7 +327,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: append a single body row.
+    /// Append a single body row.
     #[must_use]
     pub fn row(mut self, cells: &'a [&'a str]) -> Self {
         self.columns = self.columns.max(cells.len());
@@ -331,7 +335,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: explicit column count. Overrides the auto-derived width;
+    /// Explicit column count. Overrides the auto-derived width;
     /// useful when some rows are short.
     #[must_use]
     pub fn columns(mut self, columns: usize) -> Self {
@@ -339,14 +343,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: zebra-stripe alternating rows (default `true`).
+    /// Zebra-stripe alternating rows (default `true`).
     #[must_use]
     pub fn striped(mut self, on: bool) -> Self {
         self.striped = on;
         self
     }
 
-    /// Builder: `(row, col)` of the cell to render highlighted. Host-driven —
+    /// `(row, col)` of the cell to render highlighted. Host-driven —
     /// typically the value the last [`Table::on_select`] set.
     #[must_use]
     pub fn selected(mut self, row: usize, col: usize) -> Self {
@@ -354,7 +358,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: callback invoked with a tapped body cell's `(row, col)`.
+    /// Callback invoked with a tapped body cell's `(row, col)`.
     /// Without it the body cells are inert.
     #[must_use]
     pub fn on_select<F>(mut self, f: F) -> Self
@@ -365,7 +369,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: make this table scrollable on `dir`. Tables scroll
+    /// Make this table scrollable on `dir`. Tables scroll
     /// vertically, so [`ScrollDirection::Vertical`] is the usual choice.
     #[must_use]
     pub fn scrollable(mut self, dir: ScrollDirection) -> Self {
@@ -373,7 +377,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     /// Implies scrolling (vertical by default).
     #[must_use]
     pub fn scroll_state(mut self, state: &ScrollState) -> Self {
@@ -384,7 +388,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: when the scrollbar is drawn.
+    /// When the scrollbar is drawn.
     #[must_use]
     pub fn scrollbar(mut self, mode: ScrollbarMode) -> Self {
         self.scrollbar = Some(mode);
@@ -394,7 +398,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: snapping mode.
+    /// Snapping mode.
     #[must_use]
     pub fn snap(mut self, mode: SnapMode) -> Self {
         self.snap = Some(mode);
@@ -404,7 +408,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message.
+    /// Callback mapping a [`ScrollMsg`] to the host message.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
     where
@@ -467,8 +471,12 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Default for Table<'a, C, M> {
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Table<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
-        let h = self.height.resolve(constraints.max.height, constraints.max.height);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
+        let h = self
+            .height
+            .resolve(constraints.max.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -527,11 +535,11 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Table<'a, C, M> {
             renderer.fill_rect(r, theme.accent.base)?;
             let font = theme.default_font();
             let cols = self.columns.max(1) as u32;
-            let cw = r.size.width / cols;
+            let col_w = r.size.width / cols;
             let glyph_h = font.character_size.height as i32;
             let baseline_y = r.top_left.y + r.size.height as i32 / 2 + glyph_h / 3;
             for (col, text) in cells.iter().enumerate() {
-                let cell_x = r.top_left.x + (cw * col as u32) as i32;
+                let cell_x = r.top_left.x + (col_w * col as u32) as i32;
                 renderer.draw_text(
                     text,
                     Point::new(cell_x + CELL_PADDING_X as i32, baseline_y),

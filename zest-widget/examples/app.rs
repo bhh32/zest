@@ -150,9 +150,21 @@ impl MirrorScreen {
 
     fn nav_bar(&self) -> TabBar<'_, Rgb565, AppMessage> {
         TabBar::new([
-            Tab::new("Clock", AppMessage::Navigate(ScreenId::Clock), self.active == ScreenId::Clock),
-            Tab::new("Weather", AppMessage::Navigate(ScreenId::Weather), self.active == ScreenId::Weather),
-            Tab::new("Settings", AppMessage::Navigate(ScreenId::Settings), self.active == ScreenId::Settings),
+            Tab::new(
+                "Clock",
+                AppMessage::Navigate(ScreenId::Clock),
+                self.active == ScreenId::Clock,
+            ),
+            Tab::new(
+                "Weather",
+                AppMessage::Navigate(ScreenId::Weather),
+                self.active == ScreenId::Weather,
+            ),
+            Tab::new(
+                "Settings",
+                AppMessage::Navigate(ScreenId::Settings),
+                self.active == ScreenId::Settings,
+            ),
         ])
         .height(NAV_HEIGHT)
         .spacing(4)
@@ -194,7 +206,11 @@ impl MirrorScreen {
 
         let current_row = Row::new()
             .spacing(8)
-            .push(WeatherIcon::new(weather.current_condition).width(64).height(64))
+            .push(
+                WeatherIcon::new(weather.current_condition)
+                    .width(64)
+                    .height(64),
+            )
             .push(
                 Column::new()
                     .spacing(2)
@@ -480,12 +496,9 @@ impl Application for App {
 // or channels. On hardware, swap `zest::net::http_get_json` for
 // `embassy-net` + `reqwless`.
 async fn fetch_weather(zip: String) -> Result<WeatherInfo, String> {
-    let zp: ZipResp = net::http_get_json(
-        format!("https://api.zippopotam.us/us/{zip}"),
-        USER_AGENT,
-    )
-    .await
-    .map_err(|e| format!("zip lookup: {e}"))?;
+    let zp: ZipResp = net::http_get_json(format!("https://api.zippopotam.us/us/{zip}"), USER_AGENT)
+        .await
+        .map_err(|e| format!("zip lookup: {e}"))?;
     let place = zp
         .places
         .first()

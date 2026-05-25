@@ -28,8 +28,7 @@ pub enum TouchPhase {
 
 /// Input from the platform main loop into the [`Runtime`](crate::runtime::Runtime).
 ///
-/// Currently touchscreen-only; later versions may add `Timer` for animation
-/// tick delivery.
+/// Touchscreen input only.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InputEvent {
     /// A touch event.

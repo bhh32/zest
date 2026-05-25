@@ -94,7 +94,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Pick>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, Pick(choice): Pick) -> Task<Pick> {

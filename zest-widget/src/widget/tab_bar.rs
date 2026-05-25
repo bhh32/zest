@@ -67,21 +67,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> TabBar<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent. Defaults to [`DEFAULT_HEIGHT`].
+    /// Height sizing intent. Defaults to [`DEFAULT_HEIGHT`].
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: gap between tabs.
+    /// Gap between tabs.
     #[must_use]
     pub fn spacing(mut self, spacing: u32) -> Self {
         self.inner = self.inner.spacing(spacing);

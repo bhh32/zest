@@ -17,13 +17,17 @@ impl<'a> CustomBuilder<'a> {
     /// Start from the Dark theme.
     #[must_use]
     pub fn from_dark() -> Self {
-        Self { theme: crate::theme::dark::THEME }
+        Self {
+            theme: crate::theme::dark::THEME,
+        }
     }
 
     /// Start from the Light theme.
     #[must_use]
     pub fn from_light() -> Self {
-        Self { theme: crate::theme::light::THEME }
+        Self {
+            theme: crate::theme::light::THEME,
+        }
     }
 
     /// Start from any existing theme.
@@ -67,8 +71,15 @@ impl<'a> CustomBuilder<'a> {
         self
     }
 
-    /// Override only the body font (most common case). Heading and
-    /// caption are left as the inherited theme's choices.
+    /// Override only the display font for hero text.
+    #[must_use]
+    pub fn display_font(mut self, font: &'a MonoFont<'a>) -> Self {
+        self.theme.typography.display = font;
+        self
+    }
+
+    /// Override only the body font (most common case). Display, heading,
+    /// and caption are left as the inherited theme's choices.
     #[must_use]
     pub fn font(mut self, font: &'a MonoFont<'a>) -> Self {
         self.theme.typography.body = font;

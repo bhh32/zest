@@ -1,0 +1,14 @@
+# Standalone dev tool — detached from the zest workspace so it never builds
+# on embedded targets. Run with: cargo run   (from this dir).
+[package]
+name = "fontgen"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+embedded-graphics = "0.8"
+ttf-parser = "0.25"
+ab_glyph_rasterizer = "0.1.8"
+
+[workspace]

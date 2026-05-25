@@ -96,19 +96,31 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {
         let s = &mut self.screen;
         match m {
-            Msg::Restart => s.state = State::Entering {
-                password: String::new(),
-                mode: KeyboardMode::TextLower,
-                reveal: false,
-            },
+            Msg::Restart => {
+                s.state = State::Entering {
+                    password: String::new(),
+                    mode: KeyboardMode::TextLower,
+                    reveal: false,
+                }
+            }
             Msg::Key(action) => {
-                let State::Entering { password, mode, reveal } = &mut s.state else {
+                let State::Entering {
+                    password,
+                    mode,
+                    reveal,
+                } = &mut s.state
+                else {
                     return Task::none();
                 };
                 match action {

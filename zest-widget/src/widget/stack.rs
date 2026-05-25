@@ -11,8 +11,8 @@
 //!   [`Horizontal`] / [`Vertical`] alignment (default center). A child that
 //!   asks to fill simply covers the whole stack.
 //!
-//! This is the base for future overlay widgets (Dropdown, MessageBox,
-//! Menu, Tooltip), so it is intentionally general.
+//! It backs the overlay widgets (Dropdown, MessageBox, Menu) and is kept
+//! deliberately general.
 
 use super::{Widget, element::Element};
 use alloc::vec::Vec;
@@ -50,21 +50,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Stack<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: push a child centered within the stack. Drawn on top of
+    /// Push a child centered within the stack. Drawn on top of
     /// (and polled for touch before) every child pushed earlier.
     #[must_use]
     pub fn push<W>(self, child: W) -> Self
@@ -74,7 +74,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Stack<'a, C, M> {
         self.push_aligned(child, Horizontal::Center, Vertical::Center)
     }
 
-    /// Builder: push a child positioned at an explicit alignment within
+    /// Push a child positioned at an explicit alignment within
     /// the stack's region.
     #[must_use]
     pub fn push_aligned<W>(mut self, child: W, align_x: Horizontal, align_y: Vertical) -> Self
@@ -143,7 +143,9 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Stack<'a, C, M> {
             intrinsic = Size::new(intrinsic.width.max(s.width), intrinsic.height.max(s.height));
         }
         let w = self.width.resolve(intrinsic.width, constraints.max.width);
-        let h = self.height.resolve(intrinsic.height, constraints.max.height);
+        let h = self
+            .height
+            .resolve(intrinsic.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 

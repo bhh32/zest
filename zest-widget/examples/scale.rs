@@ -66,11 +66,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
 
         Column::new()
             .spacing(6)
-            .push(
-                Container::new()
-                    .height(Length::Fixed(48))
-                    .child(ruler),
-            )
+            .push(Container::new().height(Length::Fixed(48)).child(ruler))
             .push(gauge_scale)
             .push(readout)
             .push(buttons)
@@ -88,7 +84,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

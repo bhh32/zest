@@ -1,6 +1,6 @@
 //! Drag-to-scroll list: 40 button rows in a scrollable `Column`.
 //!
-//! Demonstrates the LVGL-style feel: a 1:1 drag pans the list, a tap picks a
+//! Demonstrates drag-to-scroll: a 1:1 drag pans the list, a tap picks a
 //! row, and a drag that started on a row does NOT fire it (tap-vs-scroll
 //! threshold). Releasing a fast drag flings with friction; over-dragging an
 //! edge stretches then springs back. Momentum is driven by a self-rescheduling
@@ -97,7 +97,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

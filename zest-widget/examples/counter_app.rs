@@ -48,13 +48,29 @@ impl ScreenView<Rgb565, Msg> for CounterScreen {
             .spacing(4)
             .push(Button::new("-10").on_press(Msg::Add(-10)))
             .push(Button::new("-1").on_press(Msg::Add(-1)))
-            .push(Button::new("+1").on_press(Msg::Add(1)).class(ButtonClass::Suggested))
-            .push(Button::new("+10").on_press(Msg::Add(10)).class(ButtonClass::Suggested))
-            .push(Button::new("Reset").on_press(Msg::Reset).class(ButtonClass::Destructive));
+            .push(
+                Button::new("+1")
+                    .on_press(Msg::Add(1))
+                    .class(ButtonClass::Suggested),
+            )
+            .push(
+                Button::new("+10")
+                    .on_press(Msg::Add(10))
+                    .class(ButtonClass::Suggested),
+            )
+            .push(
+                Button::new("Reset")
+                    .on_press(Msg::Reset)
+                    .class(ButtonClass::Destructive),
+            );
 
         let auto = Button::new(auto_label)
             .on_press(Msg::ToggleAuto)
-            .class(if self.auto { ButtonClass::Success } else { ButtonClass::Standard });
+            .class(if self.auto {
+                ButtonClass::Success
+            } else {
+                ButtonClass::Standard
+            });
 
         Column::new()
             .spacing(6)

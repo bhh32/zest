@@ -1,5 +1,5 @@
-//! Vertical layout container. Holds children as `Vec<Element>`, runs a
-//! flex resolve modeled on iced's `core/src/layout/flex.rs`:
+//! Vertical layout container. Runs a flex resolve modeled on iced's
+//! `core/src/layout/flex.rs`:
 //!
 //! 1. allocate `Length::Fixed` slots,
 //! 2. measure `Length::Shrink` children with the residual constraint,
@@ -72,28 +72,28 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         }
     }
 
-    /// Builder: gap between children.
+    /// Gap between children.
     #[must_use]
     pub fn spacing(mut self, spacing: u32) -> Self {
         self.spacing = spacing;
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: add a child.
+    /// Add a child.
     #[must_use]
     pub fn push<W>(mut self, child: W) -> Self
     where
@@ -103,7 +103,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         self
     }
 
-    /// Builder: make this column scrollable on `dir`. Defaults the scrollbar
+    /// Make this column scrollable on `dir`. Defaults the scrollbar
     /// to [`ScrollbarMode::Auto`] and no snapping. Pair with
     /// [`Column::scroll_state`] to supply the host's [`ScrollState`].
     #[must_use]
@@ -119,7 +119,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     /// Implies scrolling (defaults to [`ScrollDirection::Vertical`] if
     /// [`Column::scrollable`] was not called first).
     #[must_use]
@@ -135,7 +135,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         self
     }
 
-    /// Builder: when the scrollbar is drawn. Implies scrolling.
+    /// When the scrollbar is drawn. Implies scrolling.
     #[must_use]
     pub fn scrollbar(mut self, mode: ScrollbarMode) -> Self {
         let core = self.scroll.get_or_insert(ScrollCore {
@@ -149,7 +149,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         self
     }
 
-    /// Builder: snapping mode. Implies scrolling.
+    /// Snapping mode. Implies scrolling.
     #[must_use]
     pub fn snap(mut self, mode: SnapMode) -> Self {
         let core = self.scroll.get_or_insert(ScrollCore {
@@ -163,7 +163,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Implies
+    /// Callback mapping a [`ScrollMsg`] to the host message. Implies
     /// scrolling.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
@@ -206,7 +206,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         }
     }
 
-    // ---- non-scrolling layout (byte-for-byte identical to before) ------
+    // ---- non-scrolling layout ------
 
     fn relayout(&mut self) {
         let n = self.children.len();
@@ -260,10 +260,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
         // Pass 4: arrange.
         let mut y = self.rect.top_left.y;
         for (child, h) in self.children.iter_mut().zip(heights.iter()) {
-            let cell = Rectangle::new(
-                Point::new(self.rect.top_left.x, y),
-                Size::new(avail_w, *h),
-            );
+            let cell = Rectangle::new(Point::new(self.rect.top_left.x, y), Size::new(avail_w, *h));
             child.arrange(cell);
             y += *h as i32 + self.spacing as i32;
         }
@@ -306,16 +303,18 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Column<'a, C, M> {
                 // it would resolve to `UNBOUNDED` and explode the content
                 // height (a single child taller than the screen, leaving the
                 // rest unreachable). Clamp such a child to one viewport.
-                Length::Fill | Length::FillPortion(_) if scrolls_y => {
-                    self.rect.size.height
-                }
+                Length::Fill | Length::FillPortion(_) if scrolls_y => self.rect.size.height,
                 _ => child.measure(cross).height,
             };
             heights.push(h);
         }
 
         let total_spacing = spacing.saturating_mul(n as u32 - 1);
-        let content_h: u32 = heights.iter().copied().sum::<u32>().saturating_add(total_spacing);
+        let content_h: u32 = heights
+            .iter()
+            .copied()
+            .sum::<u32>()
+            .saturating_add(total_spacing);
         self.content_h = content_h;
 
         // Resolve the render offset from the host-owned state.
@@ -445,13 +444,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Column<'a, C, M> {
                 renderer.pop_clip();
                 let content = Size::new(self.rect.size.width, self.content_h);
                 scroll_core::draw_scrollbars(
-                    renderer,
-                    theme,
-                    core.state,
-                    core.bar,
-                    core.dir,
-                    viewport,
-                    content,
+                    renderer, theme, core.state, core.bar, core.dir, viewport, content,
                 )?;
                 Ok(())
             }

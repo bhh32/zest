@@ -1,3 +1,5 @@
+//! [`BoxFuture`]: the boxed future type shared by `Task` and `Subscription`.
+
 use alloc::boxed::Box;
 use core::{future::Future, pin::Pin};
 

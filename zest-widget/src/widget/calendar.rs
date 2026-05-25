@@ -19,7 +19,9 @@
 use super::Widget;
 use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::marker::PhantomData;
-use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment};
+use embedded_graphics::{
+    pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
+};
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::{ButtonCatalog, ButtonClass, Status, Theme};
 
@@ -111,14 +113,14 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
         }
     }
 
-    /// Builder: rendering mode (Month grid or Day schedule).
+    /// Rendering mode (Month grid or Day schedule).
     #[must_use]
     pub fn mode(mut self, mode: CalendarMode) -> Self {
         self.mode = mode;
         self
     }
 
-    /// Builder: text label rendered in the header in Day-view mode
+    /// Text label rendered in the header in Day-view mode
     /// (e.g. `"Mon, Mar 14"`). Ignored in Month mode.
     #[must_use]
     pub fn day_label(mut self, label: impl Into<String>) -> Self {
@@ -126,28 +128,28 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
         self
     }
 
-    /// Builder: number of days in this month (caller's date math).
+    /// Number of days in this month (caller's date math).
     #[must_use]
     pub fn days_in_month(mut self, n: u32) -> Self {
         self.days_in_month = n;
         self
     }
 
-    /// Builder: day-of-week of the 1st of this month. 0=Sun … 6=Sat.
+    /// Day-of-week of the 1st of this month. 0=Sun … 6=Sat.
     #[must_use]
     pub fn first_day_of_week(mut self, d: u8) -> Self {
         self.first_dow = d.min(6);
         self
     }
 
-    /// Builder: highlight a particular day as the user's current selection.
+    /// Highlight a particular day as the user's current selection.
     #[must_use]
     pub fn selected(mut self, day: u32) -> Self {
         self.selected_day = Some(day);
         self
     }
 
-    /// Builder: mark a day as "today" (subtle ring around the cell).
+    /// Mark a day as "today" (subtle ring around the cell).
     /// Optional; pass when you want today to stand out without selecting it.
     #[must_use]
     pub fn today(mut self, day: u32) -> Self {
@@ -155,14 +157,14 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
         self
     }
 
-    /// Builder: replace the event list outright.
+    /// Replace the event list outright.
     #[must_use]
     pub fn events(mut self, events: impl IntoIterator<Item = CalendarEvent<C>>) -> Self {
         self.events = events.into_iter().collect();
         self
     }
 
-    /// Builder: add one event marker (no time, empty label).
+    /// Add one event marker (no time, empty label).
     #[must_use]
     pub fn event(mut self, day: u32, color: C) -> Self {
         self.events.push(CalendarEvent {
@@ -174,7 +176,7 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
         self
     }
 
-    /// Builder: callback fired when a day cell is tapped.
+    /// Callback fired when a day cell is tapped.
     #[must_use]
     pub fn on_select<F>(mut self, f: F) -> Self
     where
@@ -184,28 +186,28 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
         self
     }
 
-    /// Builder: message fired when the previous-month arrow is tapped.
+    /// Message fired when the previous-month arrow is tapped.
     #[must_use]
     pub fn on_prev(mut self, msg: M) -> Self {
         self.on_prev = Some(msg);
         self
     }
 
-    /// Builder: message fired when the next-month arrow is tapped.
+    /// Message fired when the next-month arrow is tapped.
     #[must_use]
     pub fn on_next(mut self, msg: M) -> Self {
         self.on_next = Some(msg);
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, w: impl Into<Length>) -> Self {
         self.width = w.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, h: impl Into<Length>) -> Self {
         self.height = h.into();
@@ -225,7 +227,10 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
     }
 
     fn header_rect(&self) -> Rectangle {
-        Rectangle::new(self.rect.top_left, Size::new(self.rect.size.width, HEADER_H))
+        Rectangle::new(
+            self.rect.top_left,
+            Size::new(self.rect.size.width, HEADER_H),
+        )
     }
 
     fn prev_rect(&self) -> Rectangle {
@@ -346,8 +351,7 @@ enum NavZone {
 
 fn rect_contains(rect: Rectangle, p: Point) -> bool {
     let top_left = rect.top_left;
-    let bottom_right =
-        top_left + Point::new(rect.size.width as i32, rect.size.height as i32);
+    let bottom_right = top_left + Point::new(rect.size.width as i32, rect.size.height as i32);
     p.x >= top_left.x && p.x < bottom_right.x && p.y >= top_left.y && p.y < bottom_right.y
 }
 
@@ -357,7 +361,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Calendar<'a, C, M> {
             CalendarMode::Month => HEADER_H + DOW_H + WEEK_ROWS * 24,
             CalendarMode::Day => self.day_intrinsic_height(),
         };
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = match self.mode {
             CalendarMode::Day => intrinsic_h,
             CalendarMode::Month => self.height.resolve(intrinsic_h, constraints.max.height),
@@ -500,18 +506,25 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
             renderer.stroke_rect(next_rect, border)?;
         }
         let body = theme.typography.body;
-        let baseline_y = header.top_left.y + (header.size.height / 2) as i32
+        let baseline_y = header.top_left.y
+            + (header.size.height / 2) as i32
             + (body.character_size.height / 3) as i32;
         renderer.draw_text(
             "<",
-            Point::new(prev_rect.top_left.x + (prev_rect.size.width / 2) as i32, baseline_y),
+            Point::new(
+                prev_rect.top_left.x + (prev_rect.size.width / 2) as i32,
+                baseline_y,
+            ),
             body,
             prev.text,
             Alignment::Center,
         )?;
         renderer.draw_text(
             ">",
-            Point::new(next_rect.top_left.x + (next_rect.size.width / 2) as i32, baseline_y),
+            Point::new(
+                next_rect.top_left.x + (next_rect.size.width / 2) as i32,
+                baseline_y,
+            ),
             body,
             next.text,
             Alignment::Center,
@@ -543,7 +556,8 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
         let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         for (i, name) in names.iter().enumerate() {
             let x = dow.top_left.x + (i as i32) * cell_w as i32 + (cell_w / 2) as i32;
-            let y = dow.top_left.y + (dow.size.height / 2) as i32
+            let y = dow.top_left.y
+                + (dow.size.height / 2) as i32
                 + (theme.typography.caption.character_size.height / 3) as i32;
             renderer.draw_text(
                 name,
@@ -593,7 +607,8 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
                 &label,
                 Point::new(
                     cell.top_left.x + (cell.size.width / 2) as i32,
-                    cell.top_left.y + (cell.size.height / 2) as i32
+                    cell.top_left.y
+                        + (cell.size.height / 2) as i32
                         + (theme.typography.body.character_size.height / 3) as i32,
                 ),
                 theme.typography.body,
@@ -656,7 +671,8 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
                 continue;
             }
             let row = self.day_hour_rect(h as u32);
-            let bar_y_offset = ((m as i32) * (DAY_HOUR_H as i32) / 60).clamp(0, DAY_HOUR_H as i32 - 4);
+            let bar_y_offset =
+                ((m as i32) * (DAY_HOUR_H as i32) / 60).clamp(0, DAY_HOUR_H as i32 - 4);
             let bar = Rectangle::new(
                 Point::new(
                     row.top_left.x + DAY_LABEL_W as i32,

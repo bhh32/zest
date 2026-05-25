@@ -4,9 +4,8 @@
 //! background ring plus a brighter arc segment of a fixed `arc_deg`
 //! sweep, rotated to a host-provided `angle` (degrees). The host drives
 //! the rotation by storing an angle and bumping it on a timer, then
-//! rebuilding the widget each frame — exactly the immediate-mode model
-//! used elsewhere in `zest`. See `examples/spinner.rs` for a
-//! self-rescheduling `Task::perform` tick loop.
+//! rebuilding the widget each frame. See `examples/spinner.rs` for a
+//! self-rescheduling tick loop.
 
 use super::Widget;
 use core::marker::PhantomData;
@@ -50,35 +49,35 @@ impl<'a, C: PixelColor, M: Clone> Spinner<'a, C, M> {
         }
     }
 
-    /// Builder: set the current rotation angle in degrees.
+    /// Set the current rotation angle in degrees.
     #[must_use]
     pub fn angle(mut self, angle: i32) -> Self {
         self.angle = angle;
         self
     }
 
-    /// Builder: length of the bright arc segment in degrees.
+    /// Length of the bright arc segment in degrees.
     #[must_use]
     pub fn arc_deg(mut self, arc_deg: i32) -> Self {
         self.arc_deg = arc_deg;
         self
     }
 
-    /// Builder: stroke thickness in pixels.
+    /// Stroke thickness in pixels.
     #[must_use]
     pub fn width_px(mut self, width: u32) -> Self {
         self.width = width;
         self
     }
 
-    /// Builder: toggle the faint full background ring.
+    /// Toggle the faint full background ring.
     #[must_use]
     pub fn track(mut self, on: bool) -> Self {
         self.track = on;
         self
     }
 
-    /// Builder: override the background-ring color (default:
+    /// Override the background-ring color (default:
     /// `theme.background.divider`).
     #[must_use]
     pub fn track_color(mut self, color: C) -> Self {
@@ -86,7 +85,7 @@ impl<'a, C: PixelColor, M: Clone> Spinner<'a, C, M> {
         self
     }
 
-    /// Builder: override the rotating-arc color (default:
+    /// Override the rotating-arc color (default:
     /// `theme.accent.base`).
     #[must_use]
     pub fn arc_color(mut self, color: C) -> Self {
@@ -94,14 +93,14 @@ impl<'a, C: PixelColor, M: Clone> Spinner<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.w = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.h = height.into();
@@ -124,7 +123,9 @@ impl<'a, C: PixelColor, M: Clone> Spinner<'a, C, M> {
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Spinner<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let w = self.w.resolve(constraints.max.width, constraints.max.width);
-        let h = self.h.resolve(constraints.max.height, constraints.max.height);
+        let h = self
+            .h
+            .resolve(constraints.max.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 

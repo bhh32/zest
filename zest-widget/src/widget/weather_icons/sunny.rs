@@ -48,14 +48,10 @@ pub(crate) fn draw_small(
     renderer: &mut dyn Renderer<Rgb565>,
     rect: Rectangle,
 ) -> Result<(), RenderError> {
-    // A smaller sun nudged up-left of the rect's center, so an overlapping
-    // cloud (PartlyCloudy / Showers) reveals it peeking out while the whole
-    // glyph stays centered. The offset is relative to the shared centered
-    // anchor, not the rect's top-left.
+    // Half-size sun, offset up-left of the rect's center so an overlapping
+    // cloud (PartlyCloudy / Showers) leaves it peeking out. Small enough to
+    // stay inside the rect, and anchored to the center, not the top-left.
     let (cx, cy, size) = super::anchor(rect);
-    // Half-size sun nudged up-left of center — small enough that, with the
-    // overlapping cloud, the composition stays inside the rect (no top
-    // clipping) while still reading as a sun peeking out.
     let edge = size / 2;
     let scx = cx - size / 6;
     let scy = cy - size / 6;

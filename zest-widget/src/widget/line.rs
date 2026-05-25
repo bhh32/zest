@@ -43,21 +43,21 @@ impl<'a, C: PixelColor, M: Clone> Line<'a, C, M> {
         }
     }
 
-    /// Builder: stroke color (default: `theme.background.on_base`).
+    /// Stroke color (default: `theme.background.on_base`).
     #[must_use]
     pub fn color(mut self, color: C) -> Self {
         self.color = Some(color);
         self
     }
 
-    /// Builder: stroke width in pixels (default: 1).
+    /// Stroke width in pixels (default: 1).
     #[must_use]
     pub fn width_px(mut self, width: u32) -> Self {
         self.line_width = width;
         self
     }
 
-    /// Builder: interpret the points as screen-absolute coordinates
+    /// Interpret the points as screen-absolute coordinates
     /// instead of content-relative to the arranged rect.
     #[must_use]
     pub fn absolute(mut self) -> Self {
@@ -65,14 +65,14 @@ impl<'a, C: PixelColor, M: Clone> Line<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();

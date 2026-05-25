@@ -74,28 +74,28 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         }
     }
 
-    /// Builder: gap between cells.
+    /// Gap between cells.
     #[must_use]
     pub fn spacing(mut self, spacing: u32) -> Self {
         self.spacing = spacing;
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: add a child. Excess children beyond `cols × rows` are
+    /// Add a child. Excess children beyond `cols × rows` are
     /// retained but not laid out (unless the grid is scrollable, in which
     /// case they extend the content along the scrolling axes).
     #[must_use]
@@ -107,7 +107,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         self
     }
 
-    /// Builder: make this grid scrollable on `dir` (including
+    /// Make this grid scrollable on `dir` (including
     /// [`ScrollDirection::Both`] for 2-D panning). Defaults the scrollbar to
     /// [`ScrollbarMode::Auto`] and no snapping. Pair with
     /// [`Grid::scroll_state`] to supply the host's [`ScrollState`].
@@ -124,7 +124,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     /// Implies scrolling (defaults to [`ScrollDirection::Both`] if
     /// [`Grid::scrollable`] was not called first).
     #[must_use]
@@ -140,7 +140,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         self
     }
 
-    /// Builder: when the scrollbar is drawn. Implies scrolling.
+    /// When the scrollbar is drawn. Implies scrolling.
     #[must_use]
     pub fn scrollbar(mut self, mode: ScrollbarMode) -> Self {
         let core = self.scroll.get_or_insert(ScrollCore {
@@ -154,7 +154,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         self
     }
 
-    /// Builder: snapping mode. Implies scrolling.
+    /// Snapping mode. Implies scrolling.
     #[must_use]
     pub fn snap(mut self, mode: SnapMode) -> Self {
         let core = self.scroll.get_or_insert(ScrollCore {
@@ -168,7 +168,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Implies
+    /// Callback mapping a [`ScrollMsg`] to the host message. Implies
     /// scrolling.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
@@ -211,7 +211,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
         }
     }
 
-    // ---- non-scrolling layout (byte-for-byte identical to before) ------
+    // ---- non-scrolling layout ------
 
     fn relayout(&mut self) {
         if self.cols == 0 || self.rows == 0 {
@@ -303,7 +303,9 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Grid<'a, C, M> {
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Grid<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self
             .height
             .resolve(constraints.max.height, constraints.max.height);

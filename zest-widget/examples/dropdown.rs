@@ -13,7 +13,9 @@ use alloc::string::String;
 use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 
-const OPTIONS: &[&str] = &["Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Violet"];
+const OPTIONS: &[&str] = &[
+    "Red", "Orange", "Yellow", "Green", "Blue", "Indigo", "Violet",
+];
 
 #[derive(Clone)]
 enum Msg {
@@ -83,7 +85,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

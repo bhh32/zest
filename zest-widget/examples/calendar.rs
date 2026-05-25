@@ -11,11 +11,11 @@ extern crate alloc;
 
 use alloc::{format, string::String, vec::Vec};
 use chrono::{Datelike, Days, Local, NaiveDate};
+use embassy_time::Instant;
 use embedded_graphics::pixelcolor::WebColors;
 use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 use zest::zest_widget::widget::calendar::CalendarMode;
-use embassy_time::Instant;
 
 const COLORS: &[Rgb565] = &[
     Rgb565::CSS_DEEP_SKY_BLUE,
@@ -156,8 +156,18 @@ fn first_dow(year: i32, month: u32) -> u8 {
 
 fn month_name(m: u32) -> &'static str {
     [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
     ][(m - 1).min(11) as usize]
 }
 
@@ -234,9 +244,8 @@ impl Cal {
         );
         event_list = event_list.push(horizontal_divider());
         if day_events.is_empty() {
-            event_list = event_list.push(
-                Text::new("No events.").color(self.theme.background.divider),
-            );
+            event_list =
+                event_list.push(Text::new("No events.").color(self.theme.background.divider));
         } else {
             for (idx, ev) in &day_events {
                 event_list = event_list.push(
@@ -523,7 +532,9 @@ impl Application for App {
                     s.draft_hour = ev.hour as i32;
                     s.draft_minute = ev.minute as i32;
                     s.kb_mode = KeyboardMode::TextLower;
-                    s.view = View::Editor { existing: Some(idx) };
+                    s.view = View::Editor {
+                        existing: Some(idx),
+                    };
                 }
             }
             Msg::PickColor(i) => {
@@ -571,7 +582,10 @@ impl Application for App {
             },
             Msg::Save => {
                 if !s.draft_label.is_empty() {
-                    if let View::Editor { existing: Some(idx) } = s.view {
+                    if let View::Editor {
+                        existing: Some(idx),
+                    } = s.view
+                    {
                         if let Some(ev) = s.events.get_mut(idx) {
                             ev.label = s.draft_label.clone();
                             ev.color_idx = s.draft_color;
@@ -596,7 +610,10 @@ impl Application for App {
                 s.view = View::Month;
             }
             Msg::Delete => {
-                if let View::Editor { existing: Some(idx) } = s.view {
+                if let View::Editor {
+                    existing: Some(idx),
+                } = s.view
+                {
                     if idx < s.events.len() {
                         s.events.remove(idx);
                     }

@@ -19,8 +19,16 @@ pub(crate) fn draw_at(
     let color = Rgb565::CSS_LIGHT_GRAY;
 
     renderer.fill_circle(center, big_radius as u32, color)?;
-    renderer.fill_circle(center - Point::new(big_radius, 0), small_radius as u32, color)?;
-    renderer.fill_circle(center + Point::new(big_radius, 0), small_radius as u32, color)?;
+    renderer.fill_circle(
+        center - Point::new(big_radius, 0),
+        small_radius as u32,
+        color,
+    )?;
+    renderer.fill_circle(
+        center + Point::new(big_radius, 0),
+        small_radius as u32,
+        color,
+    )?;
 
     let rect_width = (big_radius * 2 + small_radius * 2) as u32;
     let bar = Rectangle::new(

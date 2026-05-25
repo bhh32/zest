@@ -1,10 +1,7 @@
 //! Dracula At Night — a darker Dracula fork (https://github.com/bceskavich/dracula-at-night).
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
-use embedded_graphics::{
-    mono_font::MonoFont,
-    pixelcolor::Rgb888,
-};
+use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 
 const BG: Rgb888 = Rgb888::new(0x0e, 0x14, 0x19);
 const SURFACE: Rgb888 = Rgb888::new(0x19, 0x1a, 0x21);
@@ -15,7 +12,6 @@ const TEXT_FAINT: Rgb888 = Rgb888::new(0x42, 0x44, 0x50);
 const BORDER: Rgb888 = Rgb888::new(0x44, 0x47, 0x5a);
 const BORDER_LIGHT: Rgb888 = Rgb888::new(0x25, 0x33, 0x40);
 const ACCENT: Rgb888 = Rgb888::new(0xbd, 0x93, 0xf9);
-const ACCENT_HOVER: Rgb888 = Rgb888::new(0xca, 0xa9, 0xfa);
 const ACCENT_PRESSED: Rgb888 = Rgb888::new(0xa4, 0x7d, 0xe2);
 const SUCCESS: Rgb888 = Rgb888::new(0x50, 0xfa, 0x7b);
 const SUCCESS_HOVER: Rgb888 = Rgb888::new(0x73, 0xfa, 0x97);
@@ -32,9 +28,21 @@ const DEFAULT_FONT: &MonoFont<'static> = &crate::font::FONT_ZEST_MONO;
 
 /// Dracula At Night theme.
 pub const THEME: Theme<'static, Rgb888> = Theme {
-    background: Container { base: BG, on_base: TEXT, divider: BORDER_LIGHT },
-    primary: Container { base: SURFACE, on_base: TEXT, divider: BORDER },
-    secondary: Container { base: ELEVATED, on_base: TEXT, divider: BORDER },
+    background: Container {
+        base: BG,
+        on_base: TEXT,
+        divider: BORDER_LIGHT,
+    },
+    primary: Container {
+        base: SURFACE,
+        on_base: TEXT,
+        divider: BORDER,
+    },
+    secondary: Container {
+        base: ELEVATED,
+        on_base: TEXT,
+        divider: BORDER,
+    },
     accent: Component {
         base: ACCENT,
         pressed: ACCENT_PRESSED,
@@ -101,7 +109,12 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
+    typography: crate::Typography::new(
+        &crate::font::FONT_ZEST_MONO_DISPLAY,
+        &crate::font::FONT_ZEST_MONO_HEADING,
+        DEFAULT_FONT,
+        &crate::font::FONT_ZEST_MONO_CAPTION,
+    ),
     is_dark: true,
     is_high_contrast: false,
 };

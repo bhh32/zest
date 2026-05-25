@@ -48,10 +48,13 @@ impl ScreenView<Rgb565, Msg> for Screen {
     }
 
     fn view(&self) -> Element<'_, Rgb565, Msg> {
-        let spinner: Spinner<'_, Rgb565, Msg> =
-            Spinner::new(self.angle).arc_deg(100).width_px(8);
+        let spinner: Spinner<'_, Rgb565, Msg> = Spinner::new(self.angle).arc_deg(100).width_px(8);
 
-        let label = if self.spinning { "Loading…" } else { "Paused" };
+        let label = if self.spinning {
+            "Loading…"
+        } else {
+            "Paused"
+        };
         let caption = Text::new(label)
             .align_x(Horizontal::Center)
             .font(self.theme.typography.body)
@@ -91,7 +94,12 @@ impl Application for App {
 
     fn init() -> (Self, Task<Msg>) {
         // Kick off the spin loop immediately.
-        (Self { screen: Screen::new() }, tick_task())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            tick_task(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

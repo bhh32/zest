@@ -2,11 +2,10 @@
 //! knob.
 //!
 //! Immediate-mode: the host owns the `f32` value and rebuilds the widget
-//! each frame, passing the current value to [`Slider::new`]. The value is
-//! computed *directly* from the touch x position within the track on both
-//! `TouchPhase::Down` and `TouchPhase::Moved`, so dragging works without
-//! needing a remembered drag origin. The new value is clamped to the
-//! configured range and emitted via [`on_change`](Slider::on_change).
+//! each frame, passing the current value to [`Slider::new`]. On both
+//! `TouchPhase::Down` and `TouchPhase::Moved` the value is derived from the
+//! touch x within the track, so no drag-origin state is kept. It is clamped
+//! to the range and emitted via [`on_change`](Slider::on_change).
 //!
 //! Colors come from the theme's accent [`Component`](zest_theme::Component):
 //! the filled portion uses `accent.base`, the unfilled track uses
@@ -56,7 +55,7 @@ impl<'a, C: PixelColor, M: Clone> Slider<'a, C, M> {
         }
     }
 
-    /// Builder: inclusive value range. If `min >= max` the range collapses
+    /// Inclusive value range. If `min >= max` the range collapses
     /// and the slider reports `min`.
     #[must_use]
     pub fn range(mut self, min: f32, max: f32) -> Self {
@@ -65,7 +64,7 @@ impl<'a, C: PixelColor, M: Clone> Slider<'a, C, M> {
         self
     }
 
-    /// Builder: callback invoked with the new clamped value whenever the
+    /// Callback invoked with the new clamped value whenever the
     /// knob is pressed or dragged. Without it the slider is disabled and
     /// ignores touches.
     #[must_use]
@@ -74,14 +73,14 @@ impl<'a, C: PixelColor, M: Clone> Slider<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -163,13 +162,8 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Slider<'a, C, M> {
                 }
             }
             TouchPhase::Moved => {
-                // Only the slider currently under the finger responds. In
-                // zest's transient-widget model there is no per-widget
-                // "I own this drag" state, so without this hit-test every
-                // move event would be greedily consumed by whichever slider
-                // the container reaches first — dragging one slider would
-                // move another. Each slider occupies its own row, so a
-                // horizontal drag stays within bounds.
+                // Hit-test Moved too: there's no per-widget drag ownership,
+                // so without it a drag could be consumed by the wrong slider.
                 if self.hit_test(point) {
                     Some(cb(self.value_at(point.x)))
                 } else {

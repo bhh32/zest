@@ -9,7 +9,7 @@
 //! point markers.
 //!
 //! Series data is borrowed (`&'a [i32]`) so the owner keeps it alive for
-//! the frame. The API is intentionally small:
+//! the frame:
 //!
 //! ```ignore
 //! Chart::new()
@@ -73,7 +73,7 @@ impl<'a, C: PixelColor + 'a, M: Clone> Chart<'a, C, M> {
         }
     }
 
-    /// Builder: add a line series. Color defaults to `theme.accent.base`.
+    /// Add a line series. Color defaults to `theme.accent.base`.
     #[must_use]
     pub fn line_series(mut self, data: &'a [i32]) -> Self {
         self.series.push(Series {
@@ -84,7 +84,7 @@ impl<'a, C: PixelColor + 'a, M: Clone> Chart<'a, C, M> {
         self
     }
 
-    /// Builder: add a line series with an explicit color.
+    /// Add a line series with an explicit color.
     #[must_use]
     pub fn line_series_colored(mut self, data: &'a [i32], color: C) -> Self {
         self.series.push(Series {
@@ -95,7 +95,7 @@ impl<'a, C: PixelColor + 'a, M: Clone> Chart<'a, C, M> {
         self
     }
 
-    /// Builder: add a bar series. Color defaults to `theme.accent.base`.
+    /// Add a bar series. Color defaults to `theme.accent.base`.
     #[must_use]
     pub fn bar_series(mut self, data: &'a [i32]) -> Self {
         self.series.push(Series {
@@ -106,7 +106,7 @@ impl<'a, C: PixelColor + 'a, M: Clone> Chart<'a, C, M> {
         self
     }
 
-    /// Builder: add a bar series with an explicit color.
+    /// Add a bar series with an explicit color.
     #[must_use]
     pub fn bar_series_colored(mut self, data: &'a [i32], color: C) -> Self {
         self.series.push(Series {
@@ -117,21 +117,21 @@ impl<'a, C: PixelColor + 'a, M: Clone> Chart<'a, C, M> {
         self
     }
 
-    /// Builder: draw left/bottom axis lines (default: off).
+    /// Draw left/bottom axis lines (default: off).
     #[must_use]
     pub fn axes(mut self, axes: bool) -> Self {
         self.axes = axes;
         self
     }
 
-    /// Builder: number of horizontal gridlines to draw (default: 0).
+    /// Number of horizontal gridlines to draw (default: 0).
     #[must_use]
     pub fn gridlines(mut self, count: u32) -> Self {
         self.gridlines = count;
         self
     }
 
-    /// Builder: draw a small marker at each line-series data point
+    /// Draw a small marker at each line-series data point
     /// (default: off).
     #[must_use]
     pub fn points(mut self, points: bool) -> Self {
@@ -139,14 +139,14 @@ impl<'a, C: PixelColor + 'a, M: Clone> Chart<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();

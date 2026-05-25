@@ -62,16 +62,16 @@ pub mod prelude {
         TouchEvent, TouchPhase, Vertical,
     };
     pub use zest_theme::{
-        ButtonAppearance, ButtonCatalog, ButtonClass, Component, CornerRadii, Palette, Spacing,
+        ButtonAppearance, ButtonCatalog, ButtonClass, Component, CornerRadii, FONT_ZEST_MONO,
+        FONT_ZEST_MONO_CAPTION, FONT_ZEST_MONO_DISPLAY, FONT_ZEST_MONO_HEADING, Palette, Spacing,
         Status, Theme, Typography, convert_theme,
     };
     pub use zest_widget::{
         Arc, Button, Calendar, CalendarEvent, Canvas, CanvasBuffer, Chart, Checkbox, Column,
         Container, Divider, Dropdown, Element, Grid, ImageButton, IntoElement, KeyAction, Keyboard,
-        LED, KeyboardMode, Line, List, ListRow, Menu, MessageBox, ProgressBar, RadioButton, Roller,
-        Row,
-        Scale, ScaleMode, Scrollable, ScrollDirection, ScrollMsg, ScrollState, ScrollbarMode,
-        SnapMode, Slider, Space, Span, SpanGroup, SpinButton, SpinOrientation, Spinner, Stack,
+        KeyboardMode, LED, Line, List, ListRow, Menu, MessageBox, ProgressBar, RadioButton, Roller,
+        Row, Scale, ScaleMode, ScrollDirection, ScrollMsg, ScrollState, Scrollable, ScrollbarMode,
+        Slider, SnapMode, Space, Span, SpanGroup, SpinButton, SpinOrientation, Spinner, Stack,
         Switch, Tab, TabBar, Table, TableRow, Text, TextArea, Tileview, Widget, Window,
         horizontal_divider, horizontal_space, horizontal_spin_button, tick_task, vertical_divider,
         vertical_space, vertical_spin_button,

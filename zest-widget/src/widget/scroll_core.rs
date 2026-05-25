@@ -11,8 +11,8 @@
 //! - [`render_offset`] — the pixel offset a container subtracts from child
 //!   positions in `arrange` (rubber-banded while dragging, clamped otherwise).
 //! - [`snap_lines`] — candidate snap offsets derived from child rectangles.
-//! - [`draw_scrollbars`] — the thumb math from `scrollable.rs`, generalized to
-//!   both axes and all four [`ScrollbarMode`]s.
+//! - [`draw_scrollbars`] — track + proportional thumb for both axes, honoring
+//!   every [`ScrollbarMode`].
 
 use alloc::vec::Vec;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
@@ -284,10 +284,16 @@ pub fn draw_scrollbars<C: PixelColor>(
 
 /// Thumb rectangle within `track`. `vp`/`content` are the relevant axis
 /// extents, `offset` the current scroll on that axis, `vertical` selects the
-/// axis. Mirrors the proven proportional thumb math in `scrollable.rs`, which
-/// re-uses this helper so the math lives in one place.
+/// axis. The thumb is sized to the visible fraction (minimum 8 px) and
+/// positioned by the scroll fraction.
 #[must_use]
-pub fn thumb_rect(track: Rectangle, vp: u32, content: u32, offset: i32, vertical: bool) -> Rectangle {
+pub fn thumb_rect(
+    track: Rectangle,
+    vp: u32,
+    content: u32,
+    offset: i32,
+    vertical: bool,
+) -> Rectangle {
     let track_len = if vertical {
         track.size.height
     } else {
@@ -320,8 +326,5 @@ pub fn thumb_rect(track: Rectangle, vp: u32, content: u32, offset: i32, vertical
 #[must_use]
 pub fn rect_contains(rect: Rectangle, point: Point) -> bool {
     let br = rect.top_left + Point::new(rect.size.width as i32, rect.size.height as i32);
-    point.x >= rect.top_left.x
-        && point.x < br.x
-        && point.y >= rect.top_left.y
-        && point.y < br.y
+    point.x >= rect.top_left.x && point.x < br.x && point.y >= rect.top_left.y && point.y < br.y
 }

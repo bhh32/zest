@@ -20,8 +20,7 @@ use embedded_graphics_simulator::{
 };
 use std::{convert::Infallible, vec::Vec};
 use tiny_skia::{
-    Color as SkColor, FillRule, Mask, Paint, PathBuilder, Pixmap, Rect as SkRect, Stroke,
-    Transform,
+    Color as SkColor, FillRule, Mask, Paint, PathBuilder, Pixmap, Rect as SkRect, Stroke, Transform,
 };
 use zest_core::{InputEvent, Platform, RenderError, Renderer, TouchEvent, TouchPhase};
 
@@ -270,8 +269,12 @@ impl<'p> Renderer<Rgb565> for TinySkiaRenderer<'p> {
         paint.set_color(rgb565_to_skia(color));
         // Snap to pixel grid; blocks of solid color don't benefit from AA.
         paint.anti_alias = false;
-        self.pixmap
-            .fill_rect(sk_rect, &paint, Transform::identity(), self.clip_mask.as_ref());
+        self.pixmap.fill_rect(
+            sk_rect,
+            &paint,
+            Transform::identity(),
+            self.clip_mask.as_ref(),
+        );
         Ok(())
     }
 
@@ -290,8 +293,13 @@ impl<'p> Renderer<Rgb565> for TinySkiaRenderer<'p> {
         paint.anti_alias = false;
         let mut stroke = Stroke::default();
         stroke.width = 1.0;
-        self.pixmap
-            .stroke_path(&path, &paint, &stroke, Transform::identity(), self.clip_mask.as_ref());
+        self.pixmap.stroke_path(
+            &path,
+            &paint,
+            &stroke,
+            Transform::identity(),
+            self.clip_mask.as_ref(),
+        );
         Ok(())
     }
 
@@ -343,8 +351,13 @@ impl<'p> Renderer<Rgb565> for TinySkiaRenderer<'p> {
         paint.anti_alias = true;
         let mut stroke = Stroke::default();
         stroke.width = width as f32;
-        self.pixmap
-            .stroke_path(&path, &paint, &stroke, Transform::identity(), self.clip_mask.as_ref());
+        self.pixmap.stroke_path(
+            &path,
+            &paint,
+            &stroke,
+            Transform::identity(),
+            self.clip_mask.as_ref(),
+        );
         Ok(())
     }
 

@@ -54,7 +54,7 @@ impl<'a, C: PixelColor, M: Clone> Switch<'a, C, M> {
         }
     }
 
-    /// Builder: callback invoked with the toggled value (`!on`) on each
+    /// Callback invoked with the toggled value (`!on`) on each
     /// tap. Without it the switch is disabled and ignores touches.
     #[must_use]
     pub fn on_toggle<F: Fn(bool) -> M + 'a>(mut self, f: F) -> Self {
@@ -62,14 +62,14 @@ impl<'a, C: PixelColor, M: Clone> Switch<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -159,7 +159,11 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Switch<'a, C, M> {
         let track_color = if !self.is_enabled() {
             theme.background.divider
         } else if self.on {
-            if self.pressed { accent.pressed } else { accent.base }
+            if self.pressed {
+                accent.pressed
+            } else {
+                accent.base
+            }
         } else {
             theme.background.divider
         };

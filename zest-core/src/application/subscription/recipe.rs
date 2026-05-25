@@ -1,3 +1,5 @@
+//! The [`Recipe`] trait: a stable identity for a long-lived message source.
+
 use crate::application::BoxFuture;
 use core::{
     any::TypeId,

@@ -31,8 +31,7 @@ use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
 use zest_core::{
-    Constraints, Length, RenderError, Renderer, ScrollDirection, ScrollMsg, ScrollState,
-    TouchPhase,
+    Constraints, Length, RenderError, Renderer, ScrollDirection, ScrollMsg, ScrollState, TouchPhase,
 };
 use zest_theme::Theme;
 
@@ -76,7 +75,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Tileview<'a, C, M> {
         }
     }
 
-    /// Builder: paging direction. Only [`ScrollDirection::Horizontal`] and
+    /// Paging direction. Only [`ScrollDirection::Horizontal`] and
     /// [`ScrollDirection::Vertical`] are meaningful; any other value is
     /// treated as horizontal.
     #[must_use]
@@ -88,7 +87,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Tileview<'a, C, M> {
         self
     }
 
-    /// Builder: push a tile. Tiles are paged in insertion order.
+    /// Push a tile. Tiles are paged in insertion order.
     #[must_use]
     pub fn push<W>(mut self, tile: W) -> Self
     where
@@ -98,28 +97,28 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Tileview<'a, C, M> {
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     #[must_use]
     pub fn scroll_state(mut self, state: &ScrollState) -> Self {
         self.state = *state;
         self
     }
 
-    /// Builder: width sizing intent (the tileview normally fills its parent).
+    /// Width sizing intent (the tileview normally fills its parent).
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent (the tileview normally fills its parent).
+    /// Height sizing intent (the tileview normally fills its parent).
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Apply the
+    /// Callback mapping a [`ScrollMsg`] to the host message. Apply the
     /// message to the owned [`ScrollState`] in `update()`.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
@@ -130,7 +129,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Tileview<'a, C, M> {
         self
     }
 
-    /// Builder: callback fired with the active tile index when it changes.
+    /// Callback fired with the active tile index when it changes.
     /// Drive it from `update()` via [`Tileview::change_msg`] /
     /// [`Tileview::current_for`].
     #[must_use]
@@ -320,8 +319,5 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Tileview<'a, C, M> 
 fn rects_overlap(a: Rectangle, b: Rectangle) -> bool {
     let a_br = a.top_left + Point::new(a.size.width as i32, a.size.height as i32);
     let b_br = b.top_left + Point::new(b.size.width as i32, b.size.height as i32);
-    a.top_left.x < b_br.x
-        && b.top_left.x < a_br.x
-        && a.top_left.y < b_br.y
-        && b.top_left.y < a_br.y
+    a.top_left.x < b_br.x && b.top_left.x < a_br.x && a.top_left.y < b_br.y && b.top_left.y < a_br.y
 }

@@ -37,7 +37,9 @@ pub use component::Component;
 pub use container::Container;
 pub use convert::convert_theme;
 pub use corner_radii::CornerRadii;
-pub use font::{FONT_ZEST_MONO, FONT_ZEST_MONO_CAPTION, FONT_ZEST_MONO_HEADING};
+pub use font::{
+    FONT_ZEST_MONO, FONT_ZEST_MONO_CAPTION, FONT_ZEST_MONO_DISPLAY, FONT_ZEST_MONO_HEADING,
+};
 pub use palette::Palette;
 pub use spacing::Spacing;
 pub use style::{ButtonAppearance, ButtonCatalog, ButtonClass, Status};

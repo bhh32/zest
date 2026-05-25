@@ -5,9 +5,9 @@
 //! `LV_KEYBOARD_MODE_*`. The mode keys (`1#`, `ABC`/`abc`) switch the active
 //! keymap *in place*: uppercase is a sticky mode like LVGL's, not a one-shot
 //! shift. Character keys emit [`KeyAction::Char`]; the control keys emit
-//! backspace, newline, cursor-left / cursor-right, OK ([`KeyAction::Ready`])
-//! and hide ([`KeyAction::Cancel`]) — the same control set LVGL's keyboard
-//! sends to its attached text area.
+//! backspace, newline, cursor-left / cursor-right, OK ([`KeyAction::Ready`]),
+//! hide ([`KeyAction::Cancel`]), and — for a password field — a reveal toggle
+//! ([`KeyAction::ToggleReveal`]).
 //!
 //! In the transient widget model the *host* owns the current
 //! [`KeyboardMode`] (and the edited text). Each frame `view()` builds a fresh
@@ -151,30 +151,30 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
         }
     }
 
-    /// Builder: title shown above the optional preview field.
+    /// Title shown above the optional preview field.
     #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = title.into();
         self
     }
 
-    /// Builder: text shown in the optional preview field.
+    /// Text shown in the optional preview field.
     #[must_use]
     pub fn input(mut self, input: impl Into<String>) -> Self {
         self.input = input.into();
         self
     }
 
-    /// Builder: render the preview field's text masked as `*`, with a
-    /// Show/Hide button so the user can verify what they typed on the small
-    /// keys. Only takes effect with [`show_field`](Self::show_field) on.
+    /// Mask the preview field's text as `*` and add a Show/Hide
+    /// toggle to reveal it. Only takes effect with
+    /// [`show_field`](Self::show_field) on.
     #[must_use]
     pub fn is_password(mut self, is_password: bool) -> Self {
         self.is_password = is_password;
         self
     }
 
-    /// Builder: reveal the password text (host-owned). Tapping the Show/Hide
+    /// Reveal the password text (host-owned). Tapping the Show/Hide
     /// button emits [`KeyAction::ToggleReveal`]; the host flips its flag and
     /// passes it back here so the field unmasks.
     #[must_use]
@@ -183,7 +183,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
         self
     }
 
-    /// Builder: show the built-in title + preview field at the top (default
+    /// Show the built-in title + preview field at the top (default
     /// `false`). Leave off when pairing with a
     /// [`TextArea`](super::text_area::TextArea); turn on for a standalone
     /// keyboard that displays its own input.
@@ -193,14 +193,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -211,7 +211,10 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
         let reserve: u32 = if self.show_field { FIELD_H } else { 0 };
         Rectangle::new(
             Point::new(bounds.top_left.x, bounds.top_left.y + reserve as i32),
-            Size::new(bounds.size.width, bounds.size.height.saturating_sub(reserve)),
+            Size::new(
+                bounds.size.width,
+                bounds.size.height.saturating_sub(reserve),
+            ),
         )
     }
 
@@ -312,7 +315,11 @@ fn keymap(mode: KeyboardMode) -> Vec<Vec<Key>> {
                 r.push(ctrl("⌫", Backspace, 3));
                 r
             },
-            text_row(ctrl("abc", Mode(TextLower), 3), "+-/*=%!?#<>", ctrl("↵", Newline, 3)),
+            text_row(
+                ctrl("abc", Mode(TextLower), 3),
+                "+-/*=%!?#<>",
+                ctrl("↵", Newline, 3),
+            ),
             "\\@$(){}[];\"'".chars().map(ch).collect(),
             bottom_row(),
         ],
@@ -345,7 +352,9 @@ fn keymap(mode: KeyboardMode) -> Vec<Vec<Key>> {
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Keyboard<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self
             .height
             .resolve(constraints.max.height, constraints.max.height);

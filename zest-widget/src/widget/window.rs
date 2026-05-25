@@ -15,8 +15,13 @@
 //! [`Button`](super::button::Button).
 
 use super::{
-    Widget, button::Button, column::Column, container::Container,
-    element::{Element, IntoElement}, row::Row, text::Text,
+    Widget,
+    button::Button,
+    column::Column,
+    container::Container,
+    element::{Element, IntoElement},
+    row::Row,
+    text::Text,
 };
 use alloc::string::String;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
@@ -56,14 +61,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Window<'a, C, M> {
         }
     }
 
-    /// Builder: set the title bar text.
+    /// Set the title bar text.
     #[must_use]
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = title.into();
         self
     }
 
-    /// Builder: show a close button in the title bar that emits `msg` on
+    /// Show a close button in the title bar that emits `msg` on
     /// release. Omitting this hides the close button entirely.
     #[must_use]
     pub fn on_close(mut self, msg: M) -> Self {
@@ -71,7 +76,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Window<'a, C, M> {
         self
     }
 
-    /// Builder: set the content child placed below the title bar.
+    /// Set the content child placed below the title bar.
     #[must_use]
     pub fn child<W>(mut self, child: W) -> Self
     where
@@ -81,21 +86,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Window<'a, C, M> {
         self
     }
 
-    /// Builder: inner padding around the content child.
+    /// Inner padding around the content child.
     #[must_use]
     pub fn padding(mut self, padding: u32) -> Self {
         self.padding = padding;
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -104,8 +109,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Window<'a, C, M> {
 
     /// Build the internal Column tree from the current fields, consuming
     /// the title string, the close message, and the child element.
-    fn build_tree(&mut self, theme_on_base: Option<C>) -> Element<'a, C, M> {
-        let _ = theme_on_base;
+    fn build_tree(&mut self) -> Element<'a, C, M> {
         // Title bar: a Row with the title (filling) and an optional close
         // button pinned to the right.
         let title = Text::new(self.title.clone())
@@ -154,7 +158,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Default for Window<'a, C, M> {
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Window<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         if self.tree.is_none() {
-            self.tree = Some(self.build_tree(None));
+            self.tree = Some(self.build_tree());
         }
         let w = self
             .width
@@ -176,7 +180,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Window<'a, C, M> {
     fn arrange(&mut self, rect: Rectangle) {
         self.rect = rect;
         if self.tree.is_none() {
-            self.tree = Some(self.build_tree(None));
+            self.tree = Some(self.build_tree());
         }
         if let Some(tree) = self.tree.as_mut() {
             tree.arrange(rect);

@@ -21,7 +21,9 @@
 use super::Widget;
 use alloc::string::String;
 use core::marker::PhantomData;
-use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment};
+use embedded_graphics::{
+    pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
+};
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::Theme;
 
@@ -59,14 +61,14 @@ impl<C: PixelColor, M: Clone> RadioButton<C, M> {
         }
     }
 
-    /// Builder: trailing label drawn to the right of the circle.
+    /// Trailing label drawn to the right of the circle.
     #[must_use]
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
         self
     }
 
-    /// Builder: message emitted on tap. Without it the button is disabled
+    /// Message emitted on tap. Without it the button is disabled
     /// and ignores touches.
     #[must_use]
     pub fn on_select(mut self, msg: M) -> Self {
@@ -74,14 +76,14 @@ impl<C: PixelColor, M: Clone> RadioButton<C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -122,7 +124,9 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for RadioButton<C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let intrinsic = self.intrinsic();
         let w = self.width.resolve(intrinsic.width, constraints.max.width);
-        let h = self.height.resolve(intrinsic.height, constraints.max.height);
+        let h = self
+            .height
+            .resolve(intrinsic.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -208,7 +212,13 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for RadioButton<C, M> {
             } else {
                 theme.background.divider
             };
-            renderer.draw_text(label, Point::new(text_x, center_y), font, color, Alignment::Left)?;
+            renderer.draw_text(
+                label,
+                Point::new(text_x, center_y),
+                font,
+                color,
+                Alignment::Left,
+            )?;
         }
 
         Ok(())

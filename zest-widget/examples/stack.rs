@@ -6,8 +6,7 @@
 //! panel. Touch is routed top-first, so the OK button on the topmost panel
 //! intercepts taps.
 //!
-//! `Divider` is used as a filled color panel here: its `draw` fills its
-//! whole rect with the given color, so a sized `Divider` is a solid block.
+//! `Divider` doubles as a solid color panel here — a sized one fills its rect.
 
 extern crate alloc;
 use alloc::string::String;

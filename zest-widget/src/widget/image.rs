@@ -1,6 +1,6 @@
 //! Static raster image. Blits a borrowed slice of pixels into its arranged
 //! rect via [`Renderer::draw_image`] (zest_core::Renderer::draw_image),
-//! centerin when the slot is larget than the image.
+//! centering it when the slot is larger than the image.
 //!
 //! The pixel buffer is borrowed (`&'a [C]`), so the owner, typically a
 //! screen holding a decoded frame, keeps it alive for the frame.
@@ -22,7 +22,7 @@ pub struct Image<'a, C: PixelColor, M: Clone> {
 }
 
 impl<'a, C: PixelColor, M: Clone> Image<'a, C, M> {
-    /// New image froma row-major `pixels` slice of `image_size`. Defaults to
+    /// New image from a row-major `pixels` slice of `image_size`. Defaults to
     /// shrinking to the image's intrinsic size; position is assigned by the
     /// parent via `arrange`.
     pub fn new(pixels: &'a [C], image_size: Size) -> Self {
@@ -36,12 +36,14 @@ impl<'a, C: PixelColor, M: Clone> Image<'a, C, M> {
         }
     }
 
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();

@@ -23,7 +23,7 @@ pub use platform::Platform;
 pub use renderer::{DrawTargetRenderer, RenderError, Renderer, arc_sin_cos};
 pub use runtime::Runtime;
 pub use screen::ScreenView;
-pub use widget::{Element, IntoElement, Widget};
 pub use scroll::{
     GesturePhase, ScrollDirection, ScrollMsg, ScrollState, ScrollbarMode, SnapMode, tick_task,
 };
+pub use widget::{Element, IntoElement, Widget};

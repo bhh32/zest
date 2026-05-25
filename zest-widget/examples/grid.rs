@@ -242,16 +242,13 @@ impl ScreenView<Rgb565, Key> for Screen {
         Column::new()
             .spacing(2)
             .push(
-                Container::new()
-                    .height(Length::Fixed(36))
-                    .padding(4)
-                    .child(
-                        Text::new(self.calc.display.clone())
-                            .align_x(Horizontal::Right)
-                            .align_y(Vertical::Center)
-                            .font(self.theme.typography.heading)
-                            .color(self.theme.background.on_base),
-                    ),
+                Container::new().height(Length::Fixed(36)).padding(4).child(
+                    Text::new(self.calc.display.clone())
+                        .align_x(Horizontal::Right)
+                        .align_y(Vertical::Center)
+                        .font(self.theme.typography.heading)
+                        .color(self.theme.background.on_base),
+                ),
             )
             .push(grid)
             .into_element()

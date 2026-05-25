@@ -30,7 +30,11 @@ impl Screen {
         }
     }
 
-    fn labelled(&self, text: &'static str, switch: Switch<'static, Rgb565, Msg>) -> Row<'static, Rgb565, Msg> {
+    fn labelled(
+        &self,
+        text: &'static str,
+        switch: Switch<'static, Rgb565, Msg>,
+    ) -> Row<'static, Rgb565, Msg> {
         Row::new()
             .spacing(10)
             .push(
@@ -97,7 +101,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

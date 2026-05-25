@@ -1,10 +1,9 @@
 //! Drag-to-scroll single-child wrapper (the iced `Scrollable` analog).
 //!
-//! Wraps one child and makes it scrollable with the LVGL-style engine: a 1:1
-//! drag pans the content, a fast release flings with friction, over-dragging
-//! an edge stretches then springs back, and a thumb shows the position. There
-//! are no up/down buttons — dragging the content (or the scrollbar gutter)
-//! scrolls, matching LVGL / iced / libcosmic.
+//! Wraps one child and makes it scrollable with the shared scroll engine: a
+//! 1:1 drag pans the content, a fast release flings with friction,
+//! over-dragging an edge stretches then springs back, and a thumb shows the
+//! position.
 //!
 //! Like the scrollable containers, the host owns a [`ScrollState`] (widgets
 //! are transient) and passes it via [`Scrollable::scroll_state`]; the wrapper
@@ -63,36 +62,37 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Scrollable<'a, C, M> {
         }
     }
 
-    /// Builder: which axes scroll (default [`ScrollDirection::Vertical`]).
+    /// Which axes scroll (default [`ScrollDirection::Vertical`]).
     #[must_use]
     pub fn direction(mut self, dir: ScrollDirection) -> Self {
         self.dir = dir;
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     #[must_use]
     pub fn scroll_state(mut self, state: &ScrollState) -> Self {
         self.state = *state;
         self
     }
 
-    /// Builder: when the scrollbar is drawn (default [`ScrollbarMode::Auto`]).
+    /// When the scrollbar is drawn (default [`ScrollbarMode::Auto`]).
     #[must_use]
     pub fn scrollbar(mut self, mode: ScrollbarMode) -> Self {
         self.bar = mode;
         self
     }
 
-    /// Builder: snapping mode (default [`SnapMode::None`]).
+    /// Snapping mode (default [`SnapMode::None`]).
     #[must_use]
     pub fn snap(mut self, mode: SnapMode) -> Self {
         self.snap = mode;
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Without
-    /// it the viewport is inert.
+    /// Callback mapping a [`ScrollMsg`] to the host message. Without
+    /// it, scroll offsets are still computed but never reach the host, so the
+    /// position isn't persisted across frames.
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
     where
@@ -102,14 +102,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Scrollable<'a, C, M> {
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, w: impl Into<Length>) -> Self {
         self.width = w.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, h: impl Into<Length>) -> Self {
         self.height = h.into();
@@ -134,7 +134,9 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Scrollable<'a, C, M> {
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Scrollable<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self
             .height
             .resolve(constraints.max.height, constraints.max.height);
@@ -151,16 +153,19 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Scrollable<'a, C, M
         let (vw, vh) = (rect.size.width, rect.size.height);
         // Measure the child against UNBOUNDED on the scrolling axis to learn
         // its intrinsic content extent.
-        let mw = if dir.scrolls_x() { UNBOUNDED } else { vw };
-        let mh = if dir.scrolls_y() { UNBOUNDED } else { vh };
-        let m = self.child.measure(Constraints::loose(Size::new(mw, mh)));
+        let max_w = if dir.scrolls_x() { UNBOUNDED } else { vw };
+        let max_h = if dir.scrolls_y() { UNBOUNDED } else { vh };
+        let m = self
+            .child
+            .measure(Constraints::loose(Size::new(max_w, max_h)));
         self.content = Size::new(
             if dir.scrolls_x() { m.width } else { vw },
             if dir.scrolls_y() { m.height } else { vh },
         );
         let off = scroll_core::render_offset(self.state, dir);
         let size = Size::new(self.content.width.max(vw), self.content.height.max(vh));
-        self.child.arrange(Rectangle::new(rect.top_left - off, size));
+        self.child
+            .arrange(Rectangle::new(rect.top_left - off, size));
         self.child_origin = rect.top_left;
         self.child_size = size;
     }
@@ -210,7 +215,13 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Scrollable<'a, C, M
         self.child.draw(renderer, theme)?;
         renderer.pop_clip();
         scroll_core::draw_scrollbars(
-            renderer, theme, self.state, self.bar, self.dir, self.rect, self.content,
+            renderer,
+            theme,
+            self.state,
+            self.bar,
+            self.dir,
+            self.rect,
+            self.content,
         )
     }
 }

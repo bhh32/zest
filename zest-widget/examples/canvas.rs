@@ -44,7 +44,11 @@ impl Screen {
                 // Concentric rectangle frames.
                 let mut i = 0i32;
                 while i < (CANVAS_W.min(CANVAS_H) as i32) / 2 {
-                    let color = if (i / 8) % 2 == 0 { p.accent_blue } else { p.accent_green };
+                    let color = if (i / 8) % 2 == 0 {
+                        p.accent_blue
+                    } else {
+                        p.accent_green
+                    };
                     self.buffer.fill_rect(
                         i,
                         i,
@@ -62,7 +66,8 @@ impl Screen {
                 let mut x = 0i32;
                 while x < CANVAS_W as i32 {
                     self.buffer.line(cx, cy, x, 0, p.accent_red);
-                    self.buffer.line(cx, cy, x, CANVAS_H as i32 - 1, p.accent_yellow);
+                    self.buffer
+                        .line(cx, cy, x, CANVAS_H as i32 - 1, p.accent_yellow);
                     x += 12;
                 }
             }
@@ -123,7 +128,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

@@ -1,3 +1,5 @@
+//! The [`ScreenView`] trait: a screen's name, theme, and view tree.
+
 use crate::widget::Element;
 use embedded_graphics::pixelcolor::PixelColor;
 use zest_theme::Theme;

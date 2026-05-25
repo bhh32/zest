@@ -50,7 +50,7 @@ pub enum ScrollDirection {
     Horizontal,
     /// Scroll on both axes.
     Both,
-    /// No scrolling (container behaves as today).
+    /// No scrolling; the container does not pan.
     None,
 }
 
@@ -111,9 +111,8 @@ pub enum GesturePhase {
 
 /// Cross-frame scroll/gesture/velocity state owned by the host screen.
 ///
-/// `Copy` by design so the shared engine in `scroll_core` can take it by
-/// value through free functions, dodging borrow-checker aliasing between
-/// `&self.children` and `&self.scroll`.
+/// `Copy` so the `scroll_core` engine can take it by value (see this module's
+/// header for why).
 #[derive(Copy, Clone, Debug)]
 pub struct ScrollState {
     /// Current committed scroll offset in pixels (subtracted from children).
@@ -262,7 +261,7 @@ impl ScrollState {
 
     fn on_press(&mut self, point: Point, content: Size, viewport: Size, now_ms: u64) {
         self.cache_geometry(content, viewport);
-        // A fresh press always re-initializes phase, so nothing gets stuck.
+        // Reset all gesture state so a prior fling/spring can't leak in.
         self.phase = GesturePhase::Pressing;
         self.press_origin = point;
         self.offset_at_press = self.clamp_offset(self.offset);
@@ -322,7 +321,8 @@ impl ScrollState {
             self.phase = GesturePhase::Flinging;
         } else {
             // Settle: spring toward the nearest snap line, else the edge.
-            self.spring_target = self.nearest_snap(self.offset, snap_mode_from(snap_lines), snap_lines);
+            self.spring_target =
+                self.nearest_snap(self.offset, snap_mode_from(snap_lines), snap_lines);
             self.phase = GesturePhase::Springing;
         }
     }
@@ -371,10 +371,7 @@ impl ScrollState {
                     self.accum.1 -= step.y as f32;
                     // Guarantee progress even when the per-frame step rounds
                     // to zero, so the spring always reaches its target.
-                    let step = Point::new(
-                        nudge(step.x, dx),
-                        nudge(step.y, dy),
-                    );
+                    let step = Point::new(nudge(step.x, dx), nudge(step.y, dy));
                     self.offset += step;
                 }
             }
@@ -486,10 +483,9 @@ fn nudge(step: i32, delta: f32) -> i32 {
     }
 }
 
-/// Infer the snap mode from a release: a non-empty snap-line list means the
-/// caller wants snapping, otherwise plain spring-to-edge. The actual
-/// [`SnapMode`] geometry is already baked into the line values by
-/// `scroll_core::snap_lines`, so on release we only need "snap vs. not".
+/// Snapping is on iff snap lines exist. Returns `Start` as a generic "snap"
+/// marker — the edge/center/end geometry is already baked into the line values
+/// by `scroll_core::snap_lines`.
 fn snap_mode_from(snap_lines: &[i32]) -> SnapMode {
     if snap_lines.is_empty() {
         SnapMode::None

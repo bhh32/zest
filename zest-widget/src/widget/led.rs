@@ -7,9 +7,6 @@
 //! * [`LED::new`] — an always-on LED of an explicit color.
 //! * [`LED::from_state`] — an on/off LED whose color is chosen from the
 //!   `on`/`off` colors (the off color defaults to the theme divider).
-//!
-//! "Brightness" is expressed through color choice: pass a dimmer shade for
-//! a lower-brightness appearance.
 
 use super::Widget;
 use core::marker::PhantomData;
@@ -65,35 +62,35 @@ impl<C: PixelColor, M: Clone> LED<C, M> {
         }
     }
 
-    /// Builder: set the lit state.
+    /// Set the lit state.
     #[must_use]
     pub fn on(mut self, on: bool) -> Self {
         self.on = on;
         self
     }
 
-    /// Builder: override the lit color.
+    /// Override the lit color.
     #[must_use]
     pub fn on_color(mut self, color: C) -> Self {
         self.on_color = color;
         self
     }
 
-    /// Builder: set the unlit color (default: `theme.background.divider`).
+    /// Set the unlit color (default: `theme.background.divider`).
     #[must_use]
     pub fn off_color(mut self, color: C) -> Self {
         self.off_color = Some(color);
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
@@ -104,7 +101,9 @@ impl<C: PixelColor, M: Clone> LED<C, M> {
 impl<C: PixelColor, M: Clone> Widget<C, M> for LED<C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let w = self.width.resolve(DEFAULT_DIAMETER, constraints.max.width);
-        let h = self.height.resolve(DEFAULT_DIAMETER, constraints.max.height);
+        let h = self
+            .height
+            .resolve(DEFAULT_DIAMETER, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 

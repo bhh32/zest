@@ -106,11 +106,7 @@ impl<M: Clone + 'static> Subscription<M> {
     pub(crate) fn refresh(&mut self, new: Subscription<M>) {
         let mut new_slots = new.slots;
         for new_slot in new_slots.iter_mut() {
-            if let Some(pos) = self
-                .slots
-                .iter()
-                .position(|slot| slot.id == new_slot.id)
-            {
+            if let Some(pos) = self.slots.iter().position(|slot| slot.id == new_slot.id) {
                 let old = self.slots.swap_remove(pos);
                 new_slot.pending = old.pending;
             }

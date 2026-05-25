@@ -1,10 +1,7 @@
 //! Tokyo Night — folke/tokyonight.nvim 'night' variant (verified against night.lua).
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
-use embedded_graphics::{
-    mono_font::MonoFont,
-    pixelcolor::Rgb888,
-};
+use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};
 
 const BG: Rgb888 = Rgb888::new(0x1a, 0x1b, 0x26);
 const SURFACE: Rgb888 = Rgb888::new(0x16, 0x16, 0x1e);
@@ -15,7 +12,6 @@ const TEXT_FAINT: Rgb888 = Rgb888::new(0x56, 0x5f, 0x89);
 const BORDER: Rgb888 = Rgb888::new(0x3b, 0x42, 0x61);
 const BORDER_LIGHT: Rgb888 = Rgb888::new(0x15, 0x16, 0x1e);
 const ACCENT: Rgb888 = Rgb888::new(0x7a, 0xa2, 0xf7);
-const ACCENT_HOVER: Rgb888 = Rgb888::new(0x89, 0xb0, 0xf8);
 const ACCENT_PRESSED: Rgb888 = Rgb888::new(0x5d, 0x85, 0xd6);
 const SUCCESS: Rgb888 = Rgb888::new(0x9e, 0xce, 0x6a);
 const SUCCESS_HOVER: Rgb888 = Rgb888::new(0xb0, 0xd9, 0x7c);
@@ -32,9 +28,21 @@ const DEFAULT_FONT: &MonoFont<'static> = &crate::font::FONT_ZEST_MONO;
 
 /// Tokyo Night theme.
 pub const THEME: Theme<'static, Rgb888> = Theme {
-    background: Container { base: BG, on_base: TEXT, divider: BORDER_LIGHT },
-    primary: Container { base: SURFACE, on_base: TEXT, divider: BORDER },
-    secondary: Container { base: ELEVATED, on_base: TEXT, divider: BORDER },
+    background: Container {
+        base: BG,
+        on_base: TEXT,
+        divider: BORDER_LIGHT,
+    },
+    primary: Container {
+        base: SURFACE,
+        on_base: TEXT,
+        divider: BORDER,
+    },
+    secondary: Container {
+        base: ELEVATED,
+        on_base: TEXT,
+        divider: BORDER,
+    },
     accent: Component {
         base: ACCENT,
         pressed: ACCENT_PRESSED,
@@ -101,7 +109,12 @@ pub const THEME: Theme<'static, Rgb888> = Theme {
     },
     spacing: Spacing::default_small(),
     corner_radii: CornerRadii::default_small(),
-    typography: crate::Typography::new(&crate::font::FONT_ZEST_MONO_HEADING, DEFAULT_FONT, &crate::font::FONT_ZEST_MONO_CAPTION),
+    typography: crate::Typography::new(
+        &crate::font::FONT_ZEST_MONO_DISPLAY,
+        &crate::font::FONT_ZEST_MONO_HEADING,
+        DEFAULT_FONT,
+        &crate::font::FONT_ZEST_MONO_CAPTION,
+    ),
     is_dark: true,
     is_high_contrast: false,
 };

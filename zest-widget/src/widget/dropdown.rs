@@ -18,9 +18,8 @@
 //! *last* so it draws on top of and intercepts touch before everything
 //! beneath it (see [`stack`](super::stack) for the z-order rules). The list
 //! is aligned to the top of the stack region, directly under where the
-//! field sits, so it reads as "dropping down" from the field. Because the
-//! host owns the open flag, toggling it simply adds or removes that final
-//! layer on the next frame.
+//! field sits, so it reads as "dropping down" from the field. The host owns
+//! the open flag, so the next rebuild adds or drops that layer.
 //!
 //! The stack is composed lazily on the first lifecycle call, so the
 //! chainable builders only record configuration — keeping each
@@ -61,8 +60,8 @@ pub struct Dropdown<'a, C: PixelColor, M: Clone> {
     height: Length,
     /// Composed stack, built on first lifecycle call. `None` until then.
     stack: Option<Element<'a, C, M>>,
-    /// Cached option count (the list owns its own copy of `options` once
-    /// built, so `arrange` reads the row count from here).
+    /// Option count cached at build time so `arrange` can size the overlay
+    /// region without re-reading `options`.
     option_count: usize,
 }
 
@@ -85,14 +84,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent (default [`Length::Fill`]).
+    /// Width sizing intent (default [`Length::Fill`]).
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent of the *field* (default 36px). The
+    /// Height sizing intent of the *field* (default 36px). The
     /// option list always uses one fixed-height row per option.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
@@ -100,7 +99,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         self
     }
 
-    /// Builder: the option labels. They are copied into owned `String`s so
+    /// The option labels. They are copied into owned `String`s so
     /// the widget can outlive the borrowed slice.
     #[must_use]
     pub fn options(mut self, options: &[&str]) -> Self {
@@ -109,21 +108,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         self
     }
 
-    /// Builder: the currently-selected option index (host-owned).
+    /// The currently-selected option index (host-owned).
     #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = index;
         self
     }
 
-    /// Builder: whether the option list is currently shown (host-owned).
+    /// Whether the option list is currently shown (host-owned).
     #[must_use]
     pub fn open(mut self, open: bool) -> Self {
         self.is_open = open;
         self
     }
 
-    /// Builder: text shown on the field when the selected index is out of
+    /// Text shown on the field when the selected index is out of
     /// range (e.g. nothing selected yet).
     #[must_use]
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
@@ -131,7 +130,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         self
     }
 
-    /// Builder: callback invoked when the field is tapped, receiving the
+    /// Callback invoked when the field is tapped, receiving the
     /// negated open flag. Without it the field does not toggle.
     #[must_use]
     pub fn on_toggle<F: Fn(bool) -> M + 'a>(mut self, f: F) -> Self {
@@ -139,7 +138,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         self
     }
 
-    /// Builder: callback invoked when an option is tapped, receiving that
+    /// Callback invoked when an option is tapped, receiving that
     /// option's index. Without it the options are inert.
     #[must_use]
     pub fn on_select<F: Fn(usize) -> M + 'a>(mut self, f: F) -> Self {
@@ -210,7 +209,9 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Dropdown<'a, C, M> 
         self.ensure_built();
         // Report only the field's slot to the parent; the open list is an
         // overlay that paints outside the reported size (like any modal).
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self.height.resolve(ROW_HEIGHT, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
@@ -291,7 +292,9 @@ impl<C: PixelColor, M: Clone> DropdownField<'_, C, M> {
 
 impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownField<'_, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self.height.resolve(ROW_HEIGHT, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
@@ -345,7 +348,11 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownField<'_, C, M> {
         theme: &Theme<'t, C>,
     ) -> Result<(), RenderError> {
         let comp = &theme.button;
-        let bg = if self.pressed { comp.pressed } else { comp.base };
+        let bg = if self.pressed {
+            comp.pressed
+        } else {
+            comp.base
+        };
         renderer.fill_rect(self.rect, bg)?;
         renderer.stroke_rect(self.rect, comp.border)?;
 
@@ -366,13 +373,43 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownField<'_, C, M> {
         let cx = self.rect.top_left.x + self.rect.size.width as i32 - TEXT_PAD - 6;
         let cy = self.rect.top_left.y + self.rect.size.height as i32 / 2;
         if self.open {
-            renderer.stroke_line(Point::new(cx, cy + 3), Point::new(cx + 6, cy + 3), comp.on_base, 2)?;
-            renderer.stroke_line(Point::new(cx, cy + 3), Point::new(cx + 3, cy - 3), comp.on_base, 2)?;
-            renderer.stroke_line(Point::new(cx + 6, cy + 3), Point::new(cx + 3, cy - 3), comp.on_base, 2)?;
+            renderer.stroke_line(
+                Point::new(cx, cy + 3),
+                Point::new(cx + 6, cy + 3),
+                comp.on_base,
+                2,
+            )?;
+            renderer.stroke_line(
+                Point::new(cx, cy + 3),
+                Point::new(cx + 3, cy - 3),
+                comp.on_base,
+                2,
+            )?;
+            renderer.stroke_line(
+                Point::new(cx + 6, cy + 3),
+                Point::new(cx + 3, cy - 3),
+                comp.on_base,
+                2,
+            )?;
         } else {
-            renderer.stroke_line(Point::new(cx, cy - 3), Point::new(cx + 6, cy - 3), comp.on_base, 2)?;
-            renderer.stroke_line(Point::new(cx, cy - 3), Point::new(cx + 3, cy + 3), comp.on_base, 2)?;
-            renderer.stroke_line(Point::new(cx + 6, cy - 3), Point::new(cx + 3, cy + 3), comp.on_base, 2)?;
+            renderer.stroke_line(
+                Point::new(cx, cy - 3),
+                Point::new(cx + 6, cy - 3),
+                comp.on_base,
+                2,
+            )?;
+            renderer.stroke_line(
+                Point::new(cx, cy - 3),
+                Point::new(cx + 3, cy + 3),
+                comp.on_base,
+                2,
+            )?;
+            renderer.stroke_line(
+                Point::new(cx + 6, cy - 3),
+                Point::new(cx + 3, cy + 3),
+                comp.on_base,
+                2,
+            )?;
         }
         Ok(())
     }

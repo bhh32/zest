@@ -26,7 +26,12 @@ impl Screen {
         }
     }
 
-    fn cell(&self, label: &'static str, class: ButtonClass, gated: bool) -> Button<'static, Rgb565, Msg> {
+    fn cell(
+        &self,
+        label: &'static str,
+        class: ButtonClass,
+        gated: bool,
+    ) -> Button<'static, Rgb565, Msg> {
         let msg = if gated && !self.enabled {
             None
         } else {
@@ -51,7 +56,11 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .font(self.theme.typography.heading)
             .color(self.theme.background.on_base);
 
-        let status_label = if self.enabled { "all enabled" } else { "half disabled" };
+        let status_label = if self.enabled {
+            "all enabled"
+        } else {
+            "half disabled"
+        };
         let status = Text::new(status_label.to_string())
             .align_x(Horizontal::Center)
             .font(self.theme.typography.caption)
@@ -68,9 +77,13 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .push(self.cell("Icon", ButtonClass::Icon, false))
             .push(status)
             .push(
-                Button::new(if self.enabled { "Disable half" } else { "Enable all" })
-                    .on_press(Msg::ToggleEnabled)
-                    .class(ButtonClass::Standard),
+                Button::new(if self.enabled {
+                    "Disable half"
+                } else {
+                    "Enable all"
+                })
+                .on_press(Msg::ToggleEnabled)
+                .class(ButtonClass::Standard),
             );
 
         Column::new()
@@ -92,7 +105,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

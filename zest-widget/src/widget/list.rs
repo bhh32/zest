@@ -1,21 +1,18 @@
 //! Styled, vertically scrollable list of selectable rows.
 //!
-//! `List` is a thin, opinionated wrapper over a scrollable [`Column`]: it
-//! collects rows added through its builders, lays them out with consistent
-//! padding and optional dividers, gives each row a pressed highlight, and
-//! reports a tapped row index through [`List::on_select`]. Because it builds
-//! on the same scroll engine as `Column`, it exposes the identical scroll
-//! surface — [`List::scrollable`], [`List::scroll_state`],
-//! [`List::scrollbar`], [`List::snap`], and [`List::on_scroll`] — so an
-//! application wires it exactly like the `scroll_list` example.
+//! `List` wraps a scrollable [`Column`]: it collects rows added through its
+//! builders, lays them out with consistent padding and optional dividers,
+//! gives each row a pressed highlight, and reports a tapped row index through
+//! [`List::on_select`]. It exposes the same scroll surface as `Column` —
+//! [`List::scrollable`], [`List::scroll_state`], [`List::scrollbar`],
+//! [`List::snap`], and [`List::on_scroll`].
 //!
 //! ## Composition
 //!
 //! Internally the rows are wrapped in [`ListRow`] widgets (padding + pressed
 //! highlight + select callback) and pushed into a [`Column`] configured with
 //! the requested scroll settings. Every `Widget` method delegates to that
-//! inner column, so the layout/touch/draw/scroll behavior is exactly the
-//! proven `Column` behavior.
+//! inner column, so layout/touch/draw/scroll behavior matches `Column`.
 //!
 //! ## Row colors
 //!
@@ -100,7 +97,9 @@ impl<'a, C: PixelColor, M: Clone> ListRow<'a, C, M> {
 
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for ListRow<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
         let h = self.height.resolve(ROW_HEIGHT, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
@@ -271,21 +270,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         }
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.width = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
         self
     }
 
-    /// Builder: gap (px) between rows. Defaults to 0 (rows abut, suited to
+    /// Gap (px) between rows. Defaults to 0 (rows abut, suited to
     /// dividers).
     #[must_use]
     pub fn spacing(mut self, spacing: u32) -> Self {
@@ -293,14 +292,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: draw a thin divider under every row.
+    /// Draw a thin divider under every row.
     #[must_use]
     pub fn dividers(mut self, on: bool) -> Self {
         self.dividers = on;
         self
     }
 
-    /// Builder: index of the row to render with the selected highlight.
+    /// Index of the row to render with the selected highlight.
     /// Host-driven — typically the value the last [`List::on_select`] set.
     #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
@@ -308,7 +307,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: callback invoked with a tapped row's index. Without it the
+    /// Callback invoked with a tapped row's index. Without it the
     /// rows are inert (they still draw, but emit no message).
     #[must_use]
     pub fn on_select<F>(mut self, f: F) -> Self
@@ -319,7 +318,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: append a row showing a single `label`.
+    /// Append a row showing a single `label`.
     #[must_use]
     pub fn item(mut self, label: impl Into<String>) -> Self {
         let index = self.rows.len();
@@ -327,7 +326,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: append a row with an optional leading slot (e.g. an icon
+    /// Append a row with an optional leading slot (e.g. an icon
     /// glyph), a main `label`, and an optional trailing slot (e.g. an
     /// accessory glyph or value text). Pass `""`/`None` for slots you don't
     /// need.
@@ -346,7 +345,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: append a pre-built [`ListRow`]. The row's index is reassigned
+    /// Append a pre-built [`ListRow`]. The row's index is reassigned
     /// to its position in the list, and the list-wide divider/select settings
     /// are applied at layout time.
     #[must_use]
@@ -356,7 +355,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: make this list scrollable on `dir`. Mirrors
+    /// Make this list scrollable on `dir`. Mirrors
     /// [`Column::scrollable`]. Lists are vertical, so
     /// [`ScrollDirection::Vertical`] is the usual choice.
     #[must_use]
@@ -365,7 +364,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: supply the host-owned [`ScrollState`] read this frame.
+    /// Supply the host-owned [`ScrollState`] read this frame.
     /// Implies scrolling (vertical by default). Mirrors
     /// [`Column::scroll_state`].
     #[must_use]
@@ -377,7 +376,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: when the scrollbar is drawn. Mirrors [`Column::scrollbar`].
+    /// When the scrollbar is drawn. Mirrors [`Column::scrollbar`].
     #[must_use]
     pub fn scrollbar(mut self, mode: ScrollbarMode) -> Self {
         self.scrollbar = Some(mode);
@@ -387,7 +386,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: snapping mode. Mirrors [`Column::snap`].
+    /// Snapping mode. Mirrors [`Column::snap`].
     #[must_use]
     pub fn snap(mut self, mode: SnapMode) -> Self {
         self.snap = Some(mode);
@@ -397,7 +396,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
         self
     }
 
-    /// Builder: callback mapping a [`ScrollMsg`] to the host message. Mirrors
+    /// Callback mapping a [`ScrollMsg`] to the host message. Mirrors
     /// [`Column::on_scroll`].
     #[must_use]
     pub fn on_scroll<F>(mut self, f: F) -> Self
@@ -458,8 +457,12 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Default for List<'a, C, M> {
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for List<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
-        let w = self.width.resolve(constraints.max.width, constraints.max.width);
-        let h = self.height.resolve(constraints.max.height, constraints.max.height);
+        let w = self
+            .width
+            .resolve(constraints.max.width, constraints.max.width);
+        let h = self
+            .height
+            .resolve(constraints.max.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 

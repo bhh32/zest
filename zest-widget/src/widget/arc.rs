@@ -57,14 +57,14 @@ impl<'a, C: PixelColor, M: Clone> Arc<'a, C, M> {
         }
     }
 
-    /// Builder: set the value (clamped to `min..=max` at draw time).
+    /// Set the value (clamped to `min..=max` at draw time).
     #[must_use]
     pub fn value(mut self, value: f32) -> Self {
         self.value = value;
         self
     }
 
-    /// Builder: the value range. Reordered so `min <= max`.
+    /// The value range. Reordered so `min <= max`.
     #[must_use]
     pub fn range(mut self, min: f32, max: f32) -> Self {
         if min <= max {
@@ -77,14 +77,14 @@ impl<'a, C: PixelColor, M: Clone> Arc<'a, C, M> {
         self
     }
 
-    /// Builder: starting angle in degrees (0° points right).
+    /// Starting angle in degrees (0° points right).
     #[must_use]
     pub fn start_deg(mut self, start_deg: i32) -> Self {
         self.start_deg = start_deg;
         self
     }
 
-    /// Builder: total sweep in degrees that the full range spans.
+    /// Total sweep in degrees that the full range spans.
     /// Positive sweeps counter-clockwise; negative clockwise.
     #[must_use]
     pub fn sweep_deg(mut self, sweep_deg: i32) -> Self {
@@ -92,14 +92,14 @@ impl<'a, C: PixelColor, M: Clone> Arc<'a, C, M> {
         self
     }
 
-    /// Builder: stroke thickness of both arcs in pixels.
+    /// Stroke thickness of both arcs in pixels.
     #[must_use]
     pub fn width_px(mut self, width: u32) -> Self {
         self.width = width;
         self
     }
 
-    /// Builder: override the background-track color (default:
+    /// Override the background-track color (default:
     /// `theme.background.divider`).
     #[must_use]
     pub fn track_color(mut self, color: C) -> Self {
@@ -107,21 +107,21 @@ impl<'a, C: PixelColor, M: Clone> Arc<'a, C, M> {
         self
     }
 
-    /// Builder: override the value-arc color (default: `theme.accent.base`).
+    /// Override the value-arc color (default: `theme.accent.base`).
     #[must_use]
     pub fn value_color(mut self, color: C) -> Self {
         self.value_color = Some(color);
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.w = width.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.h = height.into();
@@ -155,7 +155,9 @@ impl<'a, C: PixelColor, M: Clone> Arc<'a, C, M> {
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Arc<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let w = self.w.resolve(constraints.max.width, constraints.max.width);
-        let h = self.h.resolve(constraints.max.height, constraints.max.height);
+        let h = self
+            .h
+            .resolve(constraints.max.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -190,12 +192,26 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Arc<'a, C, M> {
         let value = self.value_color.unwrap_or(theme.accent.base);
 
         // Background track spans the full range.
-        renderer.stroke_arc(center, radius, self.start_deg, self.sweep_deg, self.width, track)?;
+        renderer.stroke_arc(
+            center,
+            radius,
+            self.start_deg,
+            self.sweep_deg,
+            self.width,
+            track,
+        )?;
 
         // Value arc spans a fraction of the sweep.
         let value_sweep = (self.sweep_deg as f32 * self.fraction()) as i32;
         if value_sweep != 0 {
-            renderer.stroke_arc(center, radius, self.start_deg, value_sweep, self.width, value)?;
+            renderer.stroke_arc(
+                center,
+                radius,
+                self.start_deg,
+                value_sweep,
+                self.width,
+                value,
+            )?;
         }
 
         Ok(())

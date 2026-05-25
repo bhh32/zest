@@ -75,11 +75,7 @@ impl Screen {
         }
         // Byte range of the char immediately before the cursor.
         let prev = self.cursor - 1;
-        let start = self
-            .text
-            .char_indices()
-            .nth(prev)
-            .map_or(0, |(b, _)| b);
+        let start = self.text.char_indices().nth(prev).map_or(0, |(b, _)| b);
         let end = self.cursor_byte();
         self.text.replace_range(start..end, "");
         self.cursor = prev;
@@ -142,7 +138,12 @@ impl Application for App {
     type Screen = Screen;
 
     fn init() -> (Self, Task<Msg>) {
-        (Self { screen: Screen::new() }, Task::none())
+        (
+            Self {
+                screen: Screen::new(),
+            },
+            Task::none(),
+        )
     }
 
     fn update(&mut self, m: Msg) -> Task<Msg> {

@@ -7,7 +7,9 @@
 use super::Widget;
 use alloc::{boxed::Box, format, string::String};
 use core::marker::PhantomData;
-use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment};
+use embedded_graphics::{
+    pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
+};
 use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
 use zest_theme::{ButtonCatalog, ButtonClass, Status, Theme};
 
@@ -65,56 +67,56 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
         }
     }
 
-    /// Builder: minimum value (inclusive).
+    /// Minimum value (inclusive).
     #[must_use]
     pub fn min(mut self, min: i32) -> Self {
         self.min = min;
         self
     }
 
-    /// Builder: maximum value (inclusive).
+    /// Maximum value (inclusive).
     #[must_use]
     pub fn max(mut self, max: i32) -> Self {
         self.max = max;
         self
     }
 
-    /// Builder: step applied on each `+`/`-` tap.
+    /// Step applied on each `+`/`-` tap.
     #[must_use]
     pub fn step(mut self, step: i32) -> Self {
         self.step = step;
         self
     }
 
-    /// Builder: layout orientation.
+    /// Layout orientation.
     #[must_use]
     pub fn orientation(mut self, o: SpinOrientation) -> Self {
         self.orientation = o;
         self
     }
 
-    /// Builder: override the displayed string. Default is `format!("{value}")`.
+    /// Override the displayed string. Default is `format!("{value}")`.
     #[must_use]
     pub fn display(mut self, s: impl Into<String>) -> Self {
         self.display = Some(s.into());
         self
     }
 
-    /// Builder: callback fired with the clamped new value on each tap.
+    /// Callback fired with the clamped new value on each tap.
     #[must_use]
     pub fn on_change<F: Fn(i32) -> M + 'a>(mut self, f: F) -> Self {
         self.on_change = Some(Box::new(f));
         self
     }
 
-    /// Builder: width sizing intent.
+    /// Width sizing intent.
     #[must_use]
     pub fn width(mut self, w: impl Into<Length>) -> Self {
         self.width = w.into();
         self
     }
 
-    /// Builder: height sizing intent.
+    /// Height sizing intent.
     #[must_use]
     pub fn height(mut self, h: impl Into<Length>) -> Self {
         self.height = h.into();
@@ -131,7 +133,9 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
     fn minus_rect(&self) -> Rectangle {
         let r = self.rect;
         match self.orientation {
-            SpinOrientation::Horizontal => Rectangle::new(r.top_left, Size::new(H_BUTTON_W, r.size.height)),
+            SpinOrientation::Horizontal => {
+                Rectangle::new(r.top_left, Size::new(H_BUTTON_W, r.size.height))
+            }
             SpinOrientation::Vertical => Rectangle::new(
                 r.top_left + Point::new(0, r.size.height.saturating_sub(V_BUTTON_H) as i32),
                 Size::new(r.size.width, V_BUTTON_H),
@@ -146,7 +150,9 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
                 r.top_left + Point::new(r.size.width.saturating_sub(H_BUTTON_W) as i32, 0),
                 Size::new(H_BUTTON_W, r.size.height),
             ),
-            SpinOrientation::Vertical => Rectangle::new(r.top_left, Size::new(r.size.width, V_BUTTON_H)),
+            SpinOrientation::Vertical => {
+                Rectangle::new(r.top_left, Size::new(r.size.width, V_BUTTON_H))
+            }
         }
     }
 
@@ -155,11 +161,17 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
         match self.orientation {
             SpinOrientation::Horizontal => {
                 let w = r.size.width.saturating_sub(H_BUTTON_W * 2);
-                Rectangle::new(r.top_left + Point::new(H_BUTTON_W as i32, 0), Size::new(w, r.size.height))
+                Rectangle::new(
+                    r.top_left + Point::new(H_BUTTON_W as i32, 0),
+                    Size::new(w, r.size.height),
+                )
             }
             SpinOrientation::Vertical => {
                 let h = r.size.height.saturating_sub(V_BUTTON_H * 2);
-                Rectangle::new(r.top_left + Point::new(0, V_BUTTON_H as i32), Size::new(r.size.width, h))
+                Rectangle::new(
+                    r.top_left + Point::new(0, V_BUTTON_H as i32),
+                    Size::new(r.size.width, h),
+                )
             }
         }
     }
@@ -223,7 +235,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for SpinButton<'a, C, M> {
     fn measure(&mut self, constraints: Constraints) -> Size {
         let intrinsic = self.intrinsic();
         let w = self.width.resolve(intrinsic.width, constraints.max.width);
-        let h = self.height.resolve(intrinsic.height, constraints.max.height);
+        let h = self
+            .height
+            .resolve(intrinsic.height, constraints.max.height);
         constraints.clamp(Size::new(w, h))
     }
 
@@ -309,7 +323,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for SpinButton<'a, C, M> {
 
         let body = theme.typography.body;
         let glyph_y = |rect: Rectangle| {
-            rect.top_left.y + (rect.size.height / 2) as i32 + (body.character_size.height / 3) as i32
+            rect.top_left.y
+                + (rect.size.height / 2) as i32
+                + (body.character_size.height / 3) as i32
         };
 
         renderer.draw_text(
