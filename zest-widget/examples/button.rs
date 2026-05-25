@@ -64,7 +64,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
         let status = Text::new(status_label.to_string())
             .align_x(Horizontal::Center)
             .font(self.theme.typography.caption)
-            .color(self.theme.background.divider);
+            .color(self.theme.palette.neutral_2);
 
         let grid = Grid::new(3, 3)
             .spacing(6)

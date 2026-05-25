@@ -11,6 +11,7 @@ authors.workspace = true
 [dependencies]
 embedded-graphics.workspace = true
 embedded-graphics-core.workspace = true
+qrcodegen-no-heap = "1.8.1"
 zest-core.workspace = true
 zest-theme.workspace = true
 
@@ -191,3 +192,7 @@ path = "examples/scroll_grid.rs"
 [[example]]
 name = "weather_icons"
 path = "examples/weather_icons.rs"
+
+[[example]]
+name = "qr"
+path = "examples/qr.rs"

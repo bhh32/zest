@@ -343,8 +343,8 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
             let color = if i == centered {
                 theme.background.on_base
             } else {
-                // Non-centered rows use the divider color.
-                theme.background.divider
+                // Non-centered rows use the muted text color.
+                theme.palette.neutral_2
             };
             renderer.draw_text(
                 label,

@@ -181,7 +181,7 @@ impl MirrorScreen {
             .push(
                 Text::new(self.clock_date.clone())
                     .align_x(Horizontal::Center)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             )
             .into_element()
     }
@@ -193,7 +193,7 @@ impl MirrorScreen {
                 .push(
                     Text::new(self.weather_status.clone())
                         .align_x(Horizontal::Center)
-                        .color(self.theme.background.divider),
+                        .color(self.theme.palette.neutral_2),
                 )
                 .push(
                     Button::new("Refresh")
@@ -220,7 +220,7 @@ impl MirrorScreen {
                     )
                     .push(
                         Text::new(weather.current_label.clone())
-                            .color(self.theme.background.divider),
+                            .color(self.theme.palette.neutral_2),
                     ),
             );
 
@@ -232,7 +232,7 @@ impl MirrorScreen {
                     .push(
                         Text::new(day.day_name.clone())
                             .align_x(Horizontal::Center)
-                            .color(self.theme.background.divider),
+                            .color(self.theme.palette.neutral_2),
                     )
                     .push(WeatherIcon::new(day.condition).width(28).height(28))
                     .push(
@@ -325,7 +325,7 @@ impl MirrorScreen {
             .push(
                 Text::new(body.to_string())
                     .align_x(Horizontal::Center)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             );
 
         if let Some((label, msg)) = action {

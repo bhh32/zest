@@ -245,7 +245,7 @@ impl Cal {
         event_list = event_list.push(horizontal_divider());
         if day_events.is_empty() {
             event_list =
-                event_list.push(Text::new("No events.").color(self.theme.background.divider));
+                event_list.push(Text::new("No events.").color(self.theme.palette.neutral_2));
         } else {
             for (idx, ev) in &day_events {
                 event_list = event_list.push(

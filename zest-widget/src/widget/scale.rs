@@ -128,7 +128,7 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         self
     }
 
-    /// Override label color (default: `theme.background.divider`).
+    /// Override label color (default: `theme.palette.neutral_2`).
     #[must_use]
     pub fn label_color(mut self, color: C) -> Self {
         self.label_color = Some(color);
@@ -218,7 +218,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Scale<'a, C, M> {
         theme: &Theme<'t, C>,
     ) -> Result<(), RenderError> {
         let tick = self.color.unwrap_or(theme.background.on_base);
-        let label_color = self.label_color.unwrap_or(theme.background.divider);
+        let label_color = self.label_color.unwrap_or(theme.palette.neutral_2);
         let font = self.font.unwrap_or(theme.typography.caption);
 
         match self.mode {

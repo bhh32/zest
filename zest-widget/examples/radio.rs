@@ -78,7 +78,7 @@ impl ScreenView<Rgb565, Pick> for Screen {
             .push(
                 Text::new(self.selected.label().to_string())
                     .font(self.theme.typography.caption)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             )
             .into_element()
     }

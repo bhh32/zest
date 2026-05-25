@@ -563,7 +563,7 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
                 name,
                 Point::new(x, y),
                 theme.typography.caption,
-                theme.background.divider,
+                theme.palette.neutral_2,
                 Alignment::Center,
             )?;
         }
@@ -643,7 +643,7 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
                     Point::new(row.top_left.x, row.top_left.y + row.size.height as i32 - 1),
                     Size::new(row.size.width, 1),
                 ),
-                theme.background.divider,
+                theme.palette.neutral_2,
             )?;
             if self.pressed_day == Some(hour) {
                 let s = theme.button(ButtonClass::Standard, Status::Pressed);
@@ -659,7 +659,7 @@ impl<'a, C: PixelColor, M: Clone> Calendar<'a, C, M> {
                     row.top_left.y + (row.size.height / 2) as i32 + baseline_off,
                 ),
                 theme.typography.caption,
-                theme.background.divider,
+                theme.palette.neutral_2,
                 Alignment::Left,
             )?;
         }

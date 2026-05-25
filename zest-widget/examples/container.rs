@@ -53,7 +53,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .push(
                 Text::new("All unsaved changes will be lost. This action cannot be undone.")
                     .font(self.theme.typography.body)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             )
             .push(vertical_space())
             .push(actions);

@@ -1,8 +1,8 @@
 # zest
 
-A retained-mode GUI framework for embedded touchscreen MCUs. Targets the CYD R3 (ESP32-WROOM-32), Pico W, and ESP32-S3 WROOM with RGB565 displays. `no_std + alloc`. Edition 2024, MSRV 1.85.
+zest is a retained-mode GUI framework for small embedded displays. It is `no_std + alloc`, uses Rust 2024, and currently targets Rust 1.85 or newer.
 
-Built on embassy as the async runtime, with an architectural shape modelled on iced and libcosmic.
+The runtime is built on embassy, and the overall shape is closer to iced/libcosmic than to a traditional callback-driven widget toolkit. Input is touch-only for now; keyboard/encoder support and a proper focus system are still on the roadmap.
 
 ## Workspace layout
 
@@ -14,7 +14,7 @@ Built on embassy as the async runtime, with an architectural shape modelled on i
 
 ## Architecture
 
-### Application — libcosmic-shaped
+### Application
 
 ```rust
 trait Application: Sized + 'static {
@@ -25,30 +25,28 @@ trait Application: Sized + 'static {
     fn init() -> (Self, Task<Self::Message>);
     fn update(&mut self, msg: Self::Message) -> Task<Self::Message>;
     fn view(&self) -> &Self::Screen;
-    fn view_mut(&mut self) -> &mut Self::Screen;
     fn subscription(&self) -> Subscription<Self::Message> { Subscription::none() }
 }
 ```
 
-The runtime calls `A::init()` once at startup to get the initial app value and a startup task. `update` is the only place global state mutates in response to messages.
+The runtime calls `A::init()` once at startup to get the initial application state and a startup task. After that, application-wide state changes flow through `update`.
 
-### Platform — async, user-pluggable
+### Platform
 
 ```rust
 trait Platform {
     type Color: PixelColor;
-    type Display: DrawTarget<Color = Self::Color>;
     type Error;
     async fn next_event(&mut self) -> Option<InputEvent>;
     async fn render_with<F>(&mut self, draw: F) -> Result<(), Self::Error>
-    where F: FnOnce(&mut Self::Display) -> Result<(), <Self::Display as DrawTarget>::Error>;
+    where F: FnOnce(&mut dyn Renderer<Self::Color>) -> Result<(), RenderError>;
     fn viewport(&self) -> Size;
 }
 ```
 
-Backend is user-defined. zest ships `zest-simulator` for desktop development; for hardware, users implement `Platform` themselves wrapping their display driver (mipidsi, etc.) and touch driver. `render_with`'s closure form lets the platform handle compositing (paged framebuffers, half-height blits, double buffering) while exposing a single full-resolution `DrawTarget` to widgets.
+Backends are user-defined. zest ships `zest-simulator` for desktop development; on hardware, you implement `Platform` around your display driver and input source. The `render_with` closure leaves room for paged framebuffers, partial buffers, and double buffering without changing widget code.
 
-### Runtime — async, embassy-driven
+### Runtime
 
 ```rust
 zest::run::<MyApp>("My App").await;
@@ -60,13 +58,13 @@ The runtime owns the event loop. Each iteration uses `embassy_futures::select3` 
 2. Any pending `Task` future (multiple via `Task::batch`)
 3. The active `Subscription`'s next future
 
-Whichever fires first feeds back through `Application::update`. After every processed message, `Application::subscription()` is re-called and compared by identity (see Recipe below) — matching identity keeps the existing future running unbroken, differing identity replaces.
+Whichever branch resolves first feeds back through `Application::update`. After every processed message, `Application::subscription()` is called again and compared by identity (see Recipe below): if the recipe is unchanged, the existing future keeps running; if not, it is replaced.
 
-Executor-agnostic at the type level — examples use `#[embassy_executor::main]` with `arch-std` for desktop, but any executor that polls a `Future<Output = ()>` works.
+At the type level, the runtime is executor-agnostic. The examples use `#[embassy_executor::main]` with `arch-std` on desktop, but anything that can poll a `Future<Output = ()>` will work.
 
 ### Task
 
-Side-effecting async work, returned from `init` or `update`. Three constructors:
+Side-effecting async work returned from `init` or `update`. There are three constructors:
 
 ```rust
 Task::none()                       // no work
@@ -77,7 +75,7 @@ Task::batch([t1, t2, t3])          // concurrent — each task's message flows i
 
 ### Subscription + Recipe
 
-Long-running message sources. The runtime refreshes after every message; identity comes from the underlying `Recipe`:
+Long-running message sources. The runtime refreshes subscriptions after every message; identity comes from the underlying `Recipe`:
 
 ```rust
 trait Recipe: Hash + 'static {
@@ -86,9 +84,9 @@ trait Recipe: Hash + 'static {
 }
 ```
 
-Identity is `TypeId::of::<R>()` + `Hash` of the recipe's fields. Refactor-stable; same recipe value across refreshes keeps the existing future running.
+Identity is `TypeId::of::<R>()` plus the `Hash` of the recipe fields. The same recipe value keeps the existing future alive across refreshes.
 
-Most users never write a Recipe — `zest::time::every` wraps the built-in `Tick<M>` recipe:
+Most applications never need to implement `Recipe` directly. `zest::time::every` wraps the built-in `Tick<M>` recipe:
 
 ```rust
 fn subscription(&self) -> Subscription<Msg> {
@@ -100,31 +98,50 @@ fn subscription(&self) -> Subscription<Msg> {
 }
 ```
 
-Power users implementing custom event sources (websockets, GPIO interrupts, sensor streams) write their own `Recipe`.
+If you need a custom event source such as a websocket, GPIO interrupt stream, or sensor feed, you can write your own `Recipe`.
 
-### Application + Screens
+### Screens
 
-- Widgets are **persistent objects** owned by screens (current model — see "Future directions" below).
-- Each screen is a struct holding its widget tree as fields, implementing `ScreenView`.
-- `Application::view_mut` exists for runtime-internal event dispatch and layout; not intended for user code.
+- `Application::view()` returns the active screen.
+- Each screen implements `ScreenView`.
+- `ScreenView::view(&self) -> Element<'_, C, M>` builds a fresh widget tree for the current frame.
+- Cross-frame state lives in the application, the screen, or host-owned state objects such as `ScrollState`, not inside widget instances.
 
 ### Layout
 
-Two-pass: `Widget::measure(&mut self, Constraints) -> Size` then `Widget::arrange(&mut self, Rectangle)`. The runtime runs these on first frame and on viewport changes.
+Widgets use a measure/arrange-style contract. On each loop iteration, the runtime rebuilds the tree, arranges it against the current viewport, draws it, and routes input through it.
 
-### Transient state
+### Input today
 
-Pressed/hovered state is cleared via `Widget::sweep(&mut self)`. The runtime calls sweep on `TouchPhase::Up`, so pressed visuals are visible from Down to Up.
+- `InputEvent` is currently touch-only.
+- Pressed visuals are touch-driven via `mark_pressed` during the active gesture.
+- There is not yet a focus tree, keyboard navigation path, or encoder/action system.
+
+## Current status
+
+| Area | Current state | Notes |
+|---|---|---|
+| Application model | Message-driven | `init`, `update`, `view`, `subscription`, `Task`, `Subscription` |
+| View/widget model | Transient | `ScreenView::view(&self)` returns a fresh `Element` tree each frame |
+| Input | Touch only | Keyboard/rotary support is planned |
+| Focus/actions | Not there yet | No focus tree, traversal, or semantic action system today |
+| Text editing | Early but usable | `TextArea` exists, but currently assumes mono-font / ASCII-friendly editing |
+| Rendering | Full-frame oriented | `render_with` keeps backend compositing flexible; invalidation/partial redraw are still future work |
+| Simulator | Mature enough for day-to-day use | SDL2 + `embedded-graphics-simulator` + `tiny-skia` |
+| Widget catalog | Broad | More than 30 runnable examples cover controls, layout, scrolling, text, and demo apps |
+| Theme system | Solid base | libcosmic-inspired tokens; some preset themes are still stubbed |
 
 ## Theme presets
 
 Fully implemented: `light`, `dark` (default), `dracula`, `dracula_at_night`, `nord`, `tokyo_night`.
 
-Stubbed (re-export `dark` until palettes are transcribed from canonical sources): `catppuccin_latte` / `frappe` / `macchiato` / `mocha`, `tokyo_night_storm`, `tokyo_night_light`, `kanagawa_wave` / `dragon` / `lotus`, `moonfly`, `nightfly`, `oxocarbon`, `ferra`. Plus `theme::custom::CustomBuilder` for user-defined themes.
+These presets still fall back to `dark` until their palettes are filled in from the canonical sources: `catppuccin_latte` / `frappe` / `macchiato` / `mocha`, `tokyo_night_storm`, `tokyo_night_light`, `kanagawa_wave` / `dragon` / `lotus`, `moonfly`, `nightfly`, `oxocarbon`, and `ferra`.
+
+For custom palettes, use `theme::custom::CustomBuilder`.
 
 ## Examples
 
-Seven runnable examples in `zest-widget/examples/`:
+`zest-widget/examples/` contains more than 30 runnable examples. A few representative ones:
 
 | Name | Demonstrates |
 |---|---|
@@ -134,7 +151,7 @@ Seven runnable examples in `zest-widget/examples/`:
 | `row` | Weighted horizontal layout (1× / 2× / 3×) |
 | `grid` | 3×4 numeric keypad |
 | `container` | Nested containers with progressive padding |
-| `keyboard` | On-screen QWERTY keyboard bridging `KeyboardEvent` → app `Msg` |
+| `keyboard` | On-screen QWERTY keyboard bridging `KeyAction` → app `Msg` |
 
 All examples follow the same shape:
 
@@ -158,13 +175,14 @@ cargo run -p zest-widget --example keyboard
 
 ## Future directions
 
-The widget model is currently **persistent**: widgets are constructed once on the screen struct and reused across frames. This is in tension with the rest of the framework, which mirrors iced/libcosmic (immutable `view`, all mutation through `update`). The natural next step is to migrate widgets to the **transient** model: `ScreenView::view(&self) -> Element<'_, C, M>` returns a fresh widget tree built from screen data each frame; widgets borrow from screen state via `Cow<'a, str>`; `view_mut` is removed.
-
-This will also enable a `TextBox` widget that reads its content from screen-owned `String` state via `Cow<'a, str>`, with the `Keyboard` widget's `on_input(msg_fn)` emitting user messages that flow through `update` to mutate that state.
-
-Separately, a `zest-desktop` crate is planned to replace `zest-simulator` for desktop deployment — winit + tiny-skia instead of SDL2, with the same `Platform` trait surface. Application code unchanged.
+- Extend `InputEvent` and the runtime beyond touch-only operation to support keyboard, rotary encoder, focus traversal, and semantic actions.
+- Add a focus tree and consistent non-touch behavior across widgets.
+- Improve text foundations beyond the current mono-font / ASCII-friendly assumptions used by `TextArea`.
+- Add invalidation and partial redraw support so hardware backends can avoid full-frame work where possible.
+- Continue evolving desktop support; a `zest-desktop` crate remains a possible future replacement for `zest-simulator`.
 
 ## Known caveats
-This framework is under HEAVY changes and the author does NOT guarantee or offer backward compatibility between releases.
-DO NOT USE THE MAIN BRANCH FOR PRODUCTION USE!!!
 
+This project is still changing quickly, and backward compatibility between releases is not guaranteed.
+
+Do not treat `main` as production-stable.

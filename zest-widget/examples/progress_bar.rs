@@ -60,7 +60,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .push(
                 Text::new(label)
                     .font(self.theme.typography.caption)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             )
             .push(
                 ProgressBar::new(self.progress)

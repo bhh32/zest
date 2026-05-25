@@ -59,7 +59,7 @@ impl ScreenView<Rgb565, Picked> for Screen {
              Portion(2)=2 shares — twice as wide as Fill.",
         )
         .font(self.theme.typography.caption)
-        .color(self.theme.background.divider);
+        .color(self.theme.palette.neutral_2);
 
         Column::new()
             .spacing(6)

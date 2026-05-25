@@ -63,7 +63,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .push(
                 Text::new("Brightness (0.0 .. 1.0)".to_string())
                     .font(self.theme.typography.caption)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             )
             .push(
                 Slider::new(self.brightness)
@@ -74,7 +74,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .push(
                 Text::new("Volume (0 .. 100)".to_string())
                     .font(self.theme.typography.caption)
-                    .color(self.theme.background.divider),
+                    .color(self.theme.palette.neutral_2),
             )
             .push(
                 Slider::new(self.volume)

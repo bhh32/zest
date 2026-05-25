@@ -210,7 +210,7 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for RadioButton<C, M> {
             let color = if self.is_enabled() {
                 theme.background.on_base
             } else {
-                theme.background.divider
+                theme.palette.neutral_2
             };
             renderer.draw_text(
                 label,

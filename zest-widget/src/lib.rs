@@ -30,6 +30,7 @@ pub use widget::list::{List, ListRow};
 pub use widget::menu::Menu;
 pub use widget::message_box::MessageBox;
 pub use widget::progress_bar::ProgressBar;
+pub use widget::qr::{EccLevel, Qr, QrError};
 pub use widget::radio::RadioButton;
 pub use widget::roller::Roller;
 pub use widget::row::Row;

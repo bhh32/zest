@@ -34,7 +34,7 @@
 //!
 //! Text defaults to `theme.background.on_base`, the cursor bar to
 //! `theme.accent.base`, and the (dimmed) placeholder to
-//! `theme.background.divider`. All three are overridable via builders.
+//! `theme.palette.neutral_2`. All three are overridable via builders.
 
 use super::Widget;
 use alloc::borrow::Cow;
@@ -139,7 +139,7 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
     }
 
     /// Override the placeholder color (default:
-    /// `theme.background.divider`).
+    /// `theme.palette.neutral_2`).
     #[must_use]
     pub fn placeholder_color(mut self, color: C) -> Self {
         self.placeholder_color = Some(color);
@@ -386,7 +386,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
         // Empty text → dimmed placeholder + a cursor at the start.
         if self.text.is_empty() {
             if !self.placeholder.is_empty() {
-                let ph_color = self.placeholder_color.unwrap_or(theme.background.divider);
+                let ph_color = self.placeholder_color.unwrap_or(theme.palette.neutral_2);
                 renderer.draw_text(
                     &self.placeholder,
                     Point::new(x0, y0 + gh),
