@@ -429,6 +429,7 @@ impl Application for App {
                 }
                 // No cursor in this append-only ZIP field.
                 KeyAction::CursorLeft | KeyAction::CursorRight => Task::none(),
+                KeyAction::ToggleReveal => Task::none(),
             },
             AppMessage::ToggleTimeFormat => {
                 s.settings.time_24h = !s.settings.time_24h;

@@ -61,6 +61,10 @@ name = "keyboard"
 path = "examples/keyboard.rs"
 
 [[example]]
+name = "password"
+path = "examples/password.rs"
+
+[[example]]
 name = "app"
 path = "examples/app.rs"
 

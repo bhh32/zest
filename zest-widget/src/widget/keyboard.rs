@@ -32,6 +32,8 @@ use zest_theme::{ButtonClass, Theme};
 
 /// Reserved height (px) for the optional title + preview field.
 const FIELD_H: u32 = 70;
+/// Width (px) of the password Show/Hide toggle button in the preview field.
+const SHOW_W: u32 = 56;
 
 /// Keyboard keymap, mirroring LVGL's `lv_keyboard_mode_t`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,6 +68,9 @@ pub enum KeyAction {
     Ready,
     /// Hide / cancel (LVGL `LV_EVENT_CANCEL`).
     Cancel,
+    /// Tapped the password field's Show/Hide button. The host flips its
+    /// `reveal` flag and passes it back via [`Keyboard::reveal`].
+    ToggleReveal,
 }
 
 /// A single key in a keymap row: a label, the action it emits, and a flex
@@ -114,9 +119,12 @@ pub struct Keyboard<'a, C: PixelColor, M: Clone> {
     input: String,
     is_password: bool,
     show_field: bool,
+    reveal: bool,
     keys: Column<'a, C, M>,
     width: Length,
     height: Length,
+    /// Host message emitted when the password Show/Hide button is tapped.
+    toggle_reveal: M,
 }
 
 impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
@@ -127,6 +135,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
     where
         F: Fn(KeyAction) -> M + Copy + 'a,
     {
+        let toggle_reveal = on_action(KeyAction::ToggleReveal);
         let keys = Self::build_keys(mode, on_action);
         Self {
             bounds: Rectangle::zero(),
@@ -134,9 +143,11 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
             input: String::new(),
             is_password: false,
             show_field: false,
+            reveal: false,
             keys,
             width: Length::Fill,
             height: Length::Fill,
+            toggle_reveal,
         }
     }
 
@@ -154,10 +165,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
         self
     }
 
-    /// Builder: render the preview field's text masked as `*`.
+    /// Builder: render the preview field's text masked as `*`, with a
+    /// Show/Hide button so the user can verify what they typed on the small
+    /// keys. Only takes effect with [`show_field`](Self::show_field) on.
     #[must_use]
     pub fn is_password(mut self, is_password: bool) -> Self {
         self.is_password = is_password;
+        self
+    }
+
+    /// Builder: reveal the password text (host-owned). Tapping the Show/Hide
+    /// button emits [`KeyAction::ToggleReveal`]; the host flips its flag and
+    /// passes it back here so the field unmasks.
+    #[must_use]
+    pub fn reveal(mut self, reveal: bool) -> Self {
+        self.reveal = reveal;
         self
     }
 
@@ -191,6 +213,21 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Keyboard<'a, C, M> {
             Point::new(bounds.top_left.x, bounds.top_left.y + reserve as i32),
             Size::new(bounds.size.width, bounds.size.height.saturating_sub(reserve)),
         )
+    }
+
+    /// Rect of the password Show/Hide button inside the preview field, or
+    /// `None` when there is no field or it isn't a password keyboard.
+    fn show_button_rect(&self) -> Option<Rectangle> {
+        if !(self.is_password && self.show_field) {
+            return None;
+        }
+        let x0 = self.bounds.top_left.x;
+        let y0 = self.bounds.top_left.y;
+        let width = self.bounds.size.width;
+        Some(Rectangle::new(
+            Point::new(x0 + width as i32 - 8 - SHOW_W as i32, y0 + 30),
+            Size::new(SHOW_W, 28),
+        ))
     }
 
     fn build_keys<F>(mode: KeyboardMode, on_action: F) -> Column<'a, C, M>
@@ -330,6 +367,18 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Keyboard<'a, C, M> 
     }
 
     fn handle_touch(&mut self, point: Point, phase: TouchPhase) -> Option<M> {
+        if let Some(btn) = self.show_button_rect() {
+            let br = btn.top_left + Point::new(btn.size.width as i32, btn.size.height as i32);
+            let inside = point.x >= btn.top_left.x
+                && point.x < br.x
+                && point.y >= btn.top_left.y
+                && point.y < br.y;
+            if inside {
+                // Toggle reveal on release; swallow press/move so the tap on
+                // the field strip never reaches the keys below.
+                return (phase == TouchPhase::Up).then(|| self.toggle_reveal.clone());
+            }
+        }
         self.keys.handle_touch(point, phase)
     }
 
@@ -358,19 +407,22 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Keyboard<'a, C, M> 
                 Alignment::Center,
             )?;
 
-            // Input field outline.
-            let field = Rectangle::new(
-                Point::new(x0 + 8, y0 + 30),
-                Size::new(width.saturating_sub(16), 28),
-            );
+            // Input field outline — narrowed to leave room for the password
+            // Show/Hide button when present.
+            let field_w = if self.is_password {
+                width.saturating_sub(16 + SHOW_W + 4)
+            } else {
+                width.saturating_sub(16)
+            };
+            let field = Rectangle::new(Point::new(x0 + 8, y0 + 30), Size::new(field_w, 28));
             renderer.stroke_rect(field, theme.button.border)?;
 
-            let display_text = if self.is_password {
+            // Masked unless the user tapped Show.
+            let display_text = if self.is_password && !self.reveal {
                 "*".repeat(self.input.chars().count())
             } else {
                 self.input.clone()
             };
-
             renderer.draw_text(
                 &display_text,
                 Point::new(x0 + 14, y0 + 49),
@@ -378,6 +430,24 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Keyboard<'a, C, M> 
                 theme.background.on_base,
                 Alignment::Left,
             )?;
+
+            // Password Show/Hide toggle.
+            if let Some(btn) = self.show_button_rect() {
+                renderer.fill_rect(btn, theme.button.base)?;
+                renderer.stroke_rect(btn, theme.button.border)?;
+                let label = if self.reveal { "Hide" } else { "Show" };
+                let glyph_h = theme.default_font().character_size.height as i32;
+                renderer.draw_text(
+                    label,
+                    Point::new(
+                        btn.top_left.x + btn.size.width as i32 / 2,
+                        btn.top_left.y + btn.size.height as i32 / 2 + glyph_h / 3,
+                    ),
+                    theme.default_font(),
+                    theme.button.on_base,
+                    Alignment::Center,
+                )?;
+            }
         }
 
         // Key grid.

@@ -567,6 +567,7 @@ impl Application for App {
                 KeyAction::Cancel => return Task::future(async { Msg::Cancel }),
                 // No cursor in this append-only label field.
                 KeyAction::CursorLeft | KeyAction::CursorRight => {}
+                KeyAction::ToggleReveal => {}
             },
             Msg::Save => {
                 if !s.draft_label.is_empty() {

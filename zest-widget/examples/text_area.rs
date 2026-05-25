@@ -167,6 +167,7 @@ impl Application for App {
                     s.cursor = 0;
                 }
                 KeyAction::Cancel => {}
+                KeyAction::ToggleReveal => {}
             },
         }
         Task::none()

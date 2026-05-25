@@ -125,6 +125,8 @@ impl Application for App {
                         }
                     }
                     KeyAction::Cancel => s.reset(),
+                    // Not a password field here.
+                    KeyAction::ToggleReveal => {}
                     // No cursor in this append-only demo.
                     KeyAction::CursorLeft | KeyAction::CursorRight => {}
                 }
