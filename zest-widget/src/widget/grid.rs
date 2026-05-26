@@ -10,7 +10,7 @@
 //! size, while any extra children extend the content beyond the viewport on
 //! the scrolling axes. The grid offsets every cell by
 //! [`scroll_core::render_offset`], clips the viewport, and draws scrollbars.
-//! See [`scroll_core`](super::scroll_core) for the shared engine. When no
+//! See [`scroll_core`] for the shared engine. When no
 //! scroll is configured the layout/touch/draw paths are identical to a plain
 //! `Grid`.
 

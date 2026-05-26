@@ -2,7 +2,7 @@
 //! top, sweeping from a start angle toward an end angle in proportion to
 //! a value within `min..=max`.
 //!
-//! The center and radius are derived from the arranged [`rect`]: the arc
+//! The center and radius are derived from the arranged rectangle: the arc
 //! is centered in the rect and the radius is half the smaller dimension
 //! (inset by the stroke width so the stroke stays inside the bounds).
 //! Angles follow the [`Renderer::stroke_arc`] convention — 0° points

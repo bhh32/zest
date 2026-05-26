@@ -16,7 +16,8 @@
 //! - [`CornerRadii`] holds the corner-radius scale (radius_xs through
 //!   radius_xl).
 //!
-//! `Theme<'a, C>` is generic over a [`PixelColor`] and a lifetime for
+//! `Theme<'a, C>` is generic over a
+//! [`embedded_graphics::pixelcolor::PixelColor`] and a lifetime for
 //! font references (which are typically `&'static MonoFont<'static>`).
 
 #![cfg_attr(not(test), no_std)]

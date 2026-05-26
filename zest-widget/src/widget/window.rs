@@ -1,18 +1,16 @@
 //! Titled panel: a title bar (filled rect + title text, optional close
 //! button) above a content area holding one child.
 //!
-//! `Window` is a *compound* widget — internally it composes a
-//! [`Column`](super::column::Column) of a title-bar [`Row`](super::row::Row)
-//! (title [`Text`](super::text::Text) plus an optional close
-//! [`Button`](super::button::Button)) above a content
-//! [`Container`](super::container::Container) wrapping the supplied child.
+//! `Window` is a *compound* widget — internally it composes a [`Column`] of a
+//! title-bar [`Row`] (title [`Text`] plus an optional close [`Button`]) above
+//! a content [`Container`] wrapping the supplied child.
 //! The internal tree is (re)built in [`arrange`](Widget::arrange) from the
 //! window's own fields, then the measure / touch / draw protocol is
 //! forwarded to it, so the host only deals with `Window` itself.
 //!
 //! The close button (present only when [`Window::on_close`] is set) emits
 //! the host message on release, exactly like a plain
-//! [`Button`](super::button::Button).
+//! [`Button`].
 
 use super::{
     Widget,

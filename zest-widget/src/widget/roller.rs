@@ -5,7 +5,7 @@
 //! A `Roller` is a self-contained scrollable widget (it does not wrap a
 //! [`Column`](super::column::Column)) so it can paint the center highlight
 //! band, dim the non-centered rows, and report the centered option to the
-//! host. It scrolls vertically with [`SnapMode::Center`]: dragging spins the
+//! host. It scrolls vertically with [`zest_core::SnapMode::Center`]: dragging spins the
 //! drum 1:1, and on release the spring settles the nearest option to the
 //! viewport center.
 //!
@@ -433,8 +433,8 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
     /// after applying a [`ScrollMsg`] (or after a [`ScrollState::tick`]) to
     /// learn which option is centered, without rebuilding the widget tree.
     ///
-    /// `item_height` must match the value configured on the widget (default
-    /// [`DEFAULT_ITEM_HEIGHT`]).
+    /// `item_height` must match the value configured on the widget (default:
+    /// 36 pixels).
     #[must_use]
     pub fn centered_for(state: &ScrollState, item_height: u32, count: usize) -> usize {
         if count == 0 {

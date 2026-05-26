@@ -1,4 +1,4 @@
-//! The async event loop that drives an [`Application`](crate::Application).
+//! The async event loop that drives an [`Application`].
 
 use crate::application::{Application, Subscription, Task};
 use crate::dirty::DirtyRegion;
@@ -12,8 +12,7 @@ use core::marker::PhantomData;
 use embassy_futures::select::{Either3, select3};
 use embedded_graphics::{prelude::*, primitives::Rectangle};
 
-/// Drives an [`Application`](crate::Application)'s event loop on a
-/// [`Platform`](crate::Platform).
+/// Drives an [`Application`]'s event loop on a [`Platform`].
 pub struct Runtime<A: Application> {
     _ph: PhantomData<A>,
 }

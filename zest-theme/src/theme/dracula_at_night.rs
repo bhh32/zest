@@ -1,4 +1,5 @@
-//! Dracula At Night — a darker Dracula fork (https://github.com/bceskavich/dracula-at-night).
+//! Dracula At Night — a darker Dracula fork
+//! (<https://github.com/bceskavich/dracula-at-night>).
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
 use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};

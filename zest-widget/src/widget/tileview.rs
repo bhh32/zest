@@ -2,7 +2,7 @@
 //!
 //! A `Tileview` lays its children out edge-to-edge along one axis — each tile
 //! filling the whole viewport — and uses the shared scroll engine with
-//! [`SnapMode::Start`] so every release settles to a tile boundary. Combined
+//! [`zest_core::SnapMode::Start`] so every release settles to a tile boundary. Combined
 //! with one snap line per tile, a flick advances or retreats exactly one tile
 //! (the spring always picks the nearest boundary).
 //!

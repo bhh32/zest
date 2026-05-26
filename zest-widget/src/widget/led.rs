@@ -1,6 +1,5 @@
 //! Passive status indicator. Draws a filled circle via
-//! [`Renderer::fill_circle`](zest_core::Renderer::fill_circle) sized to fit
-//! its arranged rect.
+//! [`Renderer::fill_circle`] sized to fit its arranged rect.
 //!
 //! Two construction styles:
 //!
@@ -32,9 +31,8 @@ pub struct LED<C: PixelColor, M: Clone> {
 }
 
 impl<C: PixelColor, M: Clone> LED<C, M> {
-    /// New always-on LED of `color`. Defaults to a fixed
-    /// [`DEFAULT_DIAMETER`] square slot; position is assigned by the parent
-    /// via `arrange`.
+    /// New always-on LED of `color`. Defaults to a fixed square slot;
+    /// position is assigned by the parent via `arrange`.
     pub fn new(color: C) -> Self {
         Self {
             rect: Rectangle::zero(),

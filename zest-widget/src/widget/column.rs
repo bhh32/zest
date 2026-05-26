@@ -12,7 +12,7 @@
 //! [`Column::scroll_state`]. The host owns a [`ScrollState`] (because widgets
 //! are transient) and passes it by reference each frame; the column reads it
 //! during layout/draw and emits [`ScrollMsg`] through [`Column::on_scroll`].
-//! See [`scroll_core`](super::scroll_core) for the shared engine. When no
+//! See [`scroll_core`] for the shared engine. When no
 //! scroll is configured the layout/touch/draw paths are identical to a plain
 //! `Column`.
 

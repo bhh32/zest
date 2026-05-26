@@ -134,12 +134,11 @@ pub enum InputEvent {
 pub enum TickResult {
     /// Nothing changed; the platform can sleep until the next event.
     Idle,
-    /// Visual changed; call [`Runtime::draw`](crate::runtime::Runtime::draw)
-    /// and flush.
+    /// Visual changed; redraw and flush.
     NeedsRedraw,
     /// Layout changed (and so the visual); a full layout + draw pass is
     /// required. The runtime handles this internally; the platform just
-    /// needs to call `draw` and flush.
+    /// needs to redraw and flush.
     NeedsLayout,
 }
 

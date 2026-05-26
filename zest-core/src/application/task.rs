@@ -12,10 +12,10 @@ use crate::application::BoxFuture;
 /// A side-effecting future (or set of them) the runtime drives.
 ///
 /// `Task` is the runtime's pending-work container: returned from
-/// [`Application::init`] and [`Application::update`], merged into the
-/// runtime's active task with [`Task::extend`], and polled via
-/// [`Task::next`]. Internally it stores a flat list of boxed futures;
-/// constructors flatten nested batches on insertion.
+/// [`crate::Application::init`] and [`crate::Application::update`], merged into
+/// the runtime's active task, and polled internally. Internally it stores a
+/// flat list of boxed futures; constructors flatten nested batches on
+/// insertion.
 ///
 /// Constructors:
 /// - Task::none - no work.

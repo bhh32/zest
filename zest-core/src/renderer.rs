@@ -608,7 +608,7 @@ static SIN_TABLE: [f32; 360] = [
     -0.01745241,
 ];
 
-/// Trig-free `(sin, cos)` of `deg` degrees via [`SIN_TABLE`].
+/// Trig-free `(sin, cos)` of `deg` degrees via a precomputed sine table.
 ///
 /// Accepts any integer degree (negative or > 360); it is reduced modulo
 /// 360 first. This is the primitive the default arc implementations use

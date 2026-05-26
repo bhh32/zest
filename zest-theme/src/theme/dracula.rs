@@ -1,4 +1,4 @@
-//! Dracula — from https://draculatheme.com (verified against the official spec).
+//! Dracula — from <https://draculatheme.com> (verified against the official spec).
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
 use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};

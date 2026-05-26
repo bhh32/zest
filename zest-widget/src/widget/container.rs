@@ -10,7 +10,7 @@
 //! [`Container::on_scroll`]. The single child is measured against
 //! `UNBOUNDED` on the scrolling axis so its intrinsic content extent is
 //! known, then offset by [`scroll_core::render_offset`]. See
-//! [`scroll_core`](super::scroll_core) for the shared engine. When no
+//! [`scroll_core`] for the shared engine. When no
 //! scroll is configured the layout/touch/draw paths are identical to a
 //! plain `Container`.
 

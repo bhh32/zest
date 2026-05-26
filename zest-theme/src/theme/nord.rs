@@ -1,4 +1,4 @@
-//! Nord — from https://www.nordtheme.com (verified against nord0-nord15 palette).
+//! Nord — from <https://www.nordtheme.com> (verified against nord0-nord15 palette).
 
 use crate::{Component, Container, CornerRadii, Palette, Spacing, Theme};
 use embedded_graphics::{mono_font::MonoFont, pixelcolor::Rgb888};

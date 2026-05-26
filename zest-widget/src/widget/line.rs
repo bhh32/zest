@@ -1,5 +1,5 @@
 //! Passive polyline. Connects a borrowed slice of points with straight
-//! segments via [`Renderer::stroke_line`](zest_core::Renderer::stroke_line).
+//! segments via [`zest_core::Renderer::stroke_line`].
 //!
 //! The point slice is borrowed (`&'a [Point]`) so the owner — typically a
 //! screen holding the data — keeps it alive for the frame. By default the

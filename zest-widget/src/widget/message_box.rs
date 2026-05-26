@@ -9,7 +9,7 @@
 //!
 //! ## Structure
 //!
-//! Built entirely from a [`Stack`](crate::Stack):
+//! Built entirely from a [`Stack`](crate::widget::stack::Stack):
 //!
 //! 1. **Scrim** (bottom layer) — a full-bleed rect filled with the darkest
 //!    neutral (`palette.neutral_10`) so the content reads as dimmed behind
@@ -17,8 +17,8 @@
 //!    catches every touch that misses the card, so the widgets behind the
 //!    modal stay inert. A tap on the scrim optionally emits
 //!    [`on_dismiss`](MessageBox::on_dismiss).
-//! 2. **Card** (top layer) — a centered [`Column`](crate::Column) of the
-//!    title, body, and a [`Row`](crate::Row) of [`Button`](crate::Button)s,
+//! 2. **Card** (top layer) — a centered [`Column`] of the title, body, and a
+//!    [`Row`] of [`Button`]s,
 //!    painted over a panel rect. Pushed last so it draws on top of and is
 //!    touched before the scrim.
 //!
