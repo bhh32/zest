@@ -2,6 +2,7 @@
 name = "zest-simulator"
 description = "Desktop simulator Platform for the zest GUI framework via embedded-graphics-simulator + SDL2."
 documentation = "https://docs.rs/zest-simulator"
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

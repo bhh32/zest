@@ -2,6 +2,7 @@
 name = "zest-core"
 description = "Application contract and async runtime for the zest GUI framework."
 documentation = "https://docs.rs/zest-core"
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -2,6 +2,7 @@
 name = "zest-widget"
 description = "Standard widget library for the zest GUI framework."
 documentation = "https://docs.rs/zest-widget"
+readme = "README.md"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -22,7 +23,7 @@ zest-theme.workspace = true
 # in SDL2 only for example builds; library users on embedded targets
 # aren't affected. The `net` feature pulls in zest's HTTP shim so the
 # weather demo doesn't need to depend on reqwest directly.
-zest = { package = "zest-gui", path = "../zest", features = ["simulator", "net"] }
+zest = { package = "zest-gui", path = "../zest", version = "0.1.1", features = ["simulator", "net"] }
 embassy-executor = { version = "0.7", features = ["arch-std", "executor-thread"] }
 embassy-time = { version = "0.4", features = ["std", "generic-queue-8"] }
 rand = { version = "0.10.1", default-features = false, features = ["alloc"] }
