@@ -1,0 +1,5 @@
+steps:
+  checks:
+    image: rust:1.85
+    commands:
+      - bash scripts/ci.sh
