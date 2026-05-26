@@ -6,7 +6,9 @@
 extern crate alloc;
 
 pub mod application;
+pub mod dirty;
 pub mod event;
+pub mod focus;
 pub mod layout;
 pub mod platform;
 pub mod renderer;
@@ -17,7 +19,12 @@ pub mod time;
 pub mod widget;
 
 pub use application::{Application, Recipe, Subscription, Task};
-pub use event::{InputEvent, TickResult, TouchEvent, TouchPhase};
+pub use dirty::{DirtyRegion, PlatformCapabilities};
+pub use event::{
+    ButtonState, EncoderEvent, InputEvent, Key, KeyEvent, TickResult, TouchEvent, TouchPhase,
+    UiAction,
+};
+pub use focus::{FocusDirection, FocusState, WidgetId};
 pub use layout::{Constraints, Horizontal, Length, UNBOUNDED, Vertical};
 pub use platform::Platform;
 pub use renderer::{DrawTargetRenderer, RenderError, Renderer, arc_sin_cos};

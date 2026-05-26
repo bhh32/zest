@@ -17,7 +17,7 @@ use super::Widget;
 use alloc::boxed::Box;
 use core::marker::PhantomData;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::Theme;
 
 /// Default track width in pixels.
@@ -32,7 +32,9 @@ const KNOB_INSET: i32 = 2;
 pub struct Switch<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
     on: bool,
+    id: Option<WidgetId>,
     on_toggle: Option<Box<dyn Fn(bool) -> M + 'a>>,
+    focused: bool,
     pressed: bool,
     width: Length,
     height: Length,
@@ -46,7 +48,9 @@ impl<'a, C: PixelColor, M: Clone> Switch<'a, C, M> {
         Self {
             rect: Rectangle::zero(),
             on,
+            id: None,
             on_toggle: None,
+            focused: false,
             pressed: false,
             width: Length::Fixed(TRACK_W),
             height: Length::Fixed(TRACK_H),
@@ -59,6 +63,13 @@ impl<'a, C: PixelColor, M: Clone> Switch<'a, C, M> {
     #[must_use]
     pub fn on_toggle<F: Fn(bool) -> M + 'a>(mut self, f: F) -> Self {
         self.on_toggle = Some(Box::new(f));
+        self
+    }
+
+    /// Set a stable id so this switch can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -148,6 +159,37 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Switch<'a, C, M> {
         }
     }
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.is_enabled()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        match action {
+            UiAction::Activate => self.on_toggle.as_ref().map(|cb| cb(!self.on)),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -168,7 +210,12 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Switch<'a, C, M> {
             theme.background.divider
         };
         renderer.fill_rect(track, track_color)?;
-        renderer.stroke_rect(track, accent.border)?;
+        let border = if self.focused {
+            accent.base
+        } else {
+            accent.border
+        };
+        renderer.stroke_rect(track, border)?;
 
         // Knob: a circle inset on whichever end the state selects.
         let radius = (track.size.height as i32 / 2 - KNOB_INSET).max(1) as u32;

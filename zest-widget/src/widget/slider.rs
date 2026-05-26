@@ -16,7 +16,7 @@ use super::Widget;
 use alloc::boxed::Box;
 use core::marker::PhantomData;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::Theme;
 
 /// Track thickness in pixels.
@@ -30,10 +30,14 @@ const INTRINSIC_W: u32 = 160;
 /// clamped value through [`on_change`](Slider::on_change).
 pub struct Slider<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
+    id: Option<WidgetId>,
     value: f32,
     min: f32,
     max: f32,
+    step: Option<f32>,
     on_change: Option<Box<dyn Fn(f32) -> M + 'a>>,
+    focused: bool,
+    pressed: bool,
     width: Length,
     height: Length,
     _color: PhantomData<C>,
@@ -45,10 +49,14 @@ impl<'a, C: PixelColor, M: Clone> Slider<'a, C, M> {
     pub fn new(value: f32) -> Self {
         Self {
             rect: Rectangle::zero(),
+            id: None,
             value,
             min: 0.0,
             max: 1.0,
+            step: None,
             on_change: None,
+            focused: false,
+            pressed: false,
             width: Length::Fill,
             height: Length::Fixed(2 * KNOB_RADIUS),
             _color: PhantomData,
@@ -61,6 +69,20 @@ impl<'a, C: PixelColor, M: Clone> Slider<'a, C, M> {
     pub fn range(mut self, min: f32, max: f32) -> Self {
         self.min = min;
         self.max = max;
+        self
+    }
+
+    /// Set a stable id so this slider can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
+        self
+    }
+
+    /// Step size used for semantic increment/decrement actions.
+    #[must_use]
+    pub fn step(mut self, step: f32) -> Self {
+        self.step = Some(step.abs());
         self
     }
 
@@ -127,6 +149,25 @@ impl<'a, C: PixelColor, M: Clone> Slider<'a, C, M> {
         let v = self.min + frac * (self.max - self.min);
         v.clamp(self.min.min(self.max), self.min.max(self.max))
     }
+
+    fn action_step(&self) -> f32 {
+        if let Some(step) = self.step
+            && step > 0.0
+        {
+            return step;
+        }
+
+        let range = (self.max - self.min).abs();
+        if range <= f32::EPSILON {
+            0.0
+        } else {
+            (range / 20.0).max(f32::EPSILON)
+        }
+    }
+
+    fn adjusted_value(&self, delta: f32) -> f32 {
+        (self.value + delta).clamp(self.min.min(self.max), self.min.max(self.max))
+    }
 }
 
 impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Slider<'a, C, M> {
@@ -156,8 +197,10 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Slider<'a, C, M> {
             // Drive value directly from x on press and during drag.
             TouchPhase::Down => {
                 if self.hit_test(point) {
+                    self.pressed = true;
                     Some(cb(self.value_at(point.x)))
                 } else {
+                    self.pressed = false;
                     None
                 }
             }
@@ -165,12 +208,64 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Slider<'a, C, M> {
                 // Hit-test Moved too: there's no per-widget drag ownership,
                 // so without it a drag could be consumed by the wrong slider.
                 if self.hit_test(point) {
+                    self.pressed = true;
                     Some(cb(self.value_at(point.x)))
                 } else {
+                    self.pressed = false;
                     None
                 }
             }
-            TouchPhase::Up => None,
+            TouchPhase::Up => {
+                self.pressed = false;
+                None
+            }
+        }
+    }
+
+    fn mark_pressed(&mut self, point: Point) {
+        if self.is_enabled() && self.hit_test(point) {
+            self.pressed = true;
+        }
+    }
+
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.is_enabled()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        let step = self.action_step();
+        match action {
+            UiAction::Increment | UiAction::NavigateRight | UiAction::NavigateUp if step > 0.0 => {
+                self.on_change
+                    .as_ref()
+                    .map(|cb| cb(self.adjusted_value(step)))
+            }
+            UiAction::Decrement | UiAction::NavigateLeft | UiAction::NavigateDown if step > 0.0 => {
+                self.on_change
+                    .as_ref()
+                    .map(|cb| cb(self.adjusted_value(-step)))
+            }
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
         }
     }
 
@@ -185,10 +280,12 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Slider<'a, C, M> {
         let track_top = cy - TRACK_THICKNESS as i32 / 2;
 
         let track_color = theme.background.divider;
-        let fill_color = if self.is_enabled() {
-            accent.base
-        } else {
+        let fill_color = if !self.is_enabled() {
             theme.background.divider
+        } else if self.pressed {
+            accent.pressed
+        } else {
+            accent.base
         };
 
         // Full track.
@@ -217,7 +314,12 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Slider<'a, C, M> {
             theme.background.base
         };
         let center = Point::new(knob_x, cy);
-        renderer.fill_circle(center, KNOB_RADIUS, accent.border)?;
+        let knob_border = if self.focused {
+            accent.base
+        } else {
+            accent.border
+        };
+        renderer.fill_circle(center, KNOB_RADIUS, knob_border)?;
         renderer.fill_circle(center, KNOB_RADIUS.saturating_sub(2), knob_color)?;
 
         Ok(())

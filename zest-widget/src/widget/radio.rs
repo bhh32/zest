@@ -24,7 +24,7 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::Theme;
 
 /// Outer circle diameter in pixels.
@@ -38,7 +38,9 @@ pub struct RadioButton<C: PixelColor, M: Clone> {
     rect: Rectangle,
     selected: bool,
     label: Option<String>,
+    id: Option<WidgetId>,
     on_select: Option<M>,
+    focused: bool,
     pressed: bool,
     width: Length,
     height: Length,
@@ -53,7 +55,9 @@ impl<C: PixelColor, M: Clone> RadioButton<C, M> {
             rect: Rectangle::zero(),
             selected,
             label: None,
+            id: None,
             on_select: None,
+            focused: false,
             pressed: false,
             width: Length::Shrink,
             height: Length::Fixed(CIRCLE_SIZE),
@@ -73,6 +77,13 @@ impl<C: PixelColor, M: Clone> RadioButton<C, M> {
     #[must_use]
     pub fn on_select(mut self, msg: M) -> Self {
         self.on_select = Some(msg);
+        self
+    }
+
+    /// Set a stable id so this radio button can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -172,6 +183,37 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for RadioButton<C, M> {
         }
     }
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.is_enabled()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        match action {
+            UiAction::Activate => self.on_select.clone(),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -180,10 +222,15 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for RadioButton<C, M> {
         let accent = &theme.accent;
         let center = self.circle_center();
         let outer = CIRCLE_SIZE / 2;
+        let border = if self.focused {
+            accent.base
+        } else {
+            accent.border
+        };
 
         // Outer ring: fill border color, then punch out the interior so a
         // ring remains (the renderer has no stroke_circle primitive).
-        renderer.fill_circle(center, outer, accent.border)?;
+        renderer.fill_circle(center, outer, border)?;
         let interior_color = if self.pressed {
             accent.pressed
         } else {
@@ -207,10 +254,12 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for RadioButton<C, M> {
             let center_y = self.rect.top_left.y
                 + self.rect.size.height as i32 / 2
                 + font.character_size.height as i32 / 3;
-            let color = if self.is_enabled() {
-                theme.background.on_base
-            } else {
+            let color = if !self.is_enabled() {
                 theme.palette.neutral_2
+            } else if self.focused {
+                theme.accent.base
+            } else {
+                theme.background.on_base
             };
             renderer.draw_text(
                 label,

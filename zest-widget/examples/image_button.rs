@@ -1,4 +1,4 @@
-//! ImageButton demo: a grid of buttons whose faces are generated RGB565
+//! ImageButton demo: a row of buttons whose faces are generated RGB565
 //! tiles, with labels and a press counter.
 
 extern crate alloc;

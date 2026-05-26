@@ -18,7 +18,7 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::{ButtonCatalog, ButtonClass, Status, Theme};
 
 /// Tappable button with a label.
@@ -26,6 +26,8 @@ pub struct Button<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
     label: String,
     on_press: Option<M>,
+    id: Option<WidgetId>,
+    focused: bool,
     pressed: bool,
     class: ButtonClass,
     font_override: Option<&'a MonoFont<'a>>,
@@ -46,6 +48,8 @@ impl<'a, C: PixelColor, M: Clone> Button<'a, C, M> {
             rect: Rectangle::zero(),
             label: label.into(),
             on_press: None,
+            id: None,
+            focused: false,
             pressed: false,
             class: ButtonClass::Standard,
             font_override: None,
@@ -82,6 +86,13 @@ impl<'a, C: PixelColor, M: Clone> Button<'a, C, M> {
     #[must_use]
     pub fn on_press_maybe(mut self, msg: Option<M>) -> Self {
         self.on_press = msg;
+        self
+    }
+
+    /// Set a stable id so this button can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -127,6 +138,8 @@ impl<'a, C: PixelColor, M: Clone> Button<'a, C, M> {
             Status::Disabled
         } else if self.pressed {
             Status::Pressed
+        } else if self.focused {
+            Status::Focused
         } else {
             Status::Active
         }
@@ -196,6 +209,37 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Button<'a, C, M> {
     fn mark_pressed(&mut self, point: Point) {
         if self.is_enabled() && self.hit_test(point) {
             self.pressed = true;
+        }
+    }
+
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.is_enabled()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        match action {
+            UiAction::Activate => self.on_press.clone(),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
         }
     }
 

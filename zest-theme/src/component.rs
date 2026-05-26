@@ -1,16 +1,16 @@
 //! [`Component`]: per-state colors for an interactive element.
 //!
-//! Embedded-trimmed: no `hovered` (touch screens have no pointer-over
-//! phase) and no `focused` (resistive panels don't carry kbd focus).
+//! Embedded-trimmed: no `hovered` state (touch screens have no pointer-over
+//! phase).
 
 use embedded_graphics::pixelcolor::PixelColor;
 
 /// Colors for an interactive UI element (button, tab, link).
 ///
-/// The five fields cover the three [`Status`](crate::Status) values
-/// (`base` for `Active`, `pressed` for `Pressed`, `disabled` for
-/// `Disabled`) plus the foreground (`on_base`, used for label text)
-/// and the border stroke.
+/// The five fields cover the four visual states in
+/// [`Status`](crate::Status): `base` is used for `Active` and `Focused`,
+/// `pressed` for `Pressed`, and `disabled` for `Disabled`. The remaining
+/// fields carry the foreground (`on_base`) and border stroke.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Component<C: PixelColor> {
     /// Resting background color.

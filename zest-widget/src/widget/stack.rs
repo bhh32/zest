@@ -17,7 +17,10 @@
 use super::{Widget, element::Element};
 use alloc::vec::Vec;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
-use zest_core::{Constraints, Horizontal, Length, RenderError, Renderer, TouchPhase, Vertical};
+use zest_core::{
+    Constraints, Horizontal, Length, RenderError, Renderer, TouchPhase, UiAction, Vertical,
+    WidgetId,
+};
 use zest_theme::Theme;
 
 /// A single layer in a [`Stack`]: a child plus the alignment used to
@@ -176,6 +179,54 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Stack<'a, C, M> {
         for layer in &mut self.layers {
             layer.child.mark_pressed(point);
         }
+    }
+
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        for layer in &self.layers {
+            layer.child.collect_focusable(out);
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        for layer in &mut self.layers {
+            layer.child.sync_focus(focused);
+        }
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        for layer in self.layers.iter_mut().rev() {
+            if let Some(msg) = layer.child.route_action(target, action) {
+                return Some(msg);
+            }
+        }
+        None
+    }
+
+    fn navigate_focus(&self, target: WidgetId, action: UiAction) -> Option<WidgetId> {
+        for layer in self.layers.iter().rev() {
+            if let Some(next) = layer.child.navigate_focus(target, action) {
+                return Some(next);
+            }
+        }
+        None
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        for layer in self.layers.iter().rev() {
+            if let Some(rect) = layer.child.focus_rect(target) {
+                return Some(rect);
+            }
+        }
+        None
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        for layer in self.layers.iter().rev() {
+            if let Some(id) = layer.child.focus_at(point) {
+                return Some(id);
+            }
+        }
+        None
     }
 
     fn draw<'t>(

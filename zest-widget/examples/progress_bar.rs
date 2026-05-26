@@ -1,5 +1,5 @@
 //! Progress bar demo: an animated download that advances on a timer, plus
-//! buttons to reset and to step it manually.
+//! a reset button.
 //!
 //! `ProgressBar` is passive — it just renders the host-owned value. Here a
 //! `time::every` subscription nudges the value forward each tick.

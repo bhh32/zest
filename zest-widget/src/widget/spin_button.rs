@@ -10,7 +10,7 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::{ButtonCatalog, ButtonClass, Status, Theme};
 
 const H_BUTTON_W: u32 = 28;
@@ -34,6 +34,7 @@ enum Side {
 /// Numeric stepper widget.
 pub struct SpinButton<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
+    id: Option<WidgetId>,
     value: i32,
     min: i32,
     max: i32,
@@ -43,6 +44,7 @@ pub struct SpinButton<'a, C: PixelColor, M: Clone> {
     on_change: Option<Box<dyn Fn(i32) -> M + 'a>>,
     width: Length,
     height: Length,
+    focused: Option<Side>,
     pressed: Option<Side>,
     _color: PhantomData<C>,
 }
@@ -53,6 +55,7 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
     pub fn new(value: i32) -> Self {
         Self {
             rect: Rectangle::zero(),
+            id: None,
             value,
             min: 0,
             max: 99,
@@ -62,6 +65,7 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
             on_change: None,
             width: Length::Fill,
             height: Length::Fill,
+            focused: None,
             pressed: None,
             _color: PhantomData,
         }
@@ -99,6 +103,13 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
     #[must_use]
     pub fn display(mut self, s: impl Into<String>) -> Self {
         self.display = Some(s.into());
+        self
+    }
+
+    /// Set a stable base id so both sides can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -201,6 +212,8 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
             Status::Disabled
         } else if self.pressed == Some(side) {
             Status::Pressed
+        } else if self.focused == Some(side) {
+            Status::Focused
         } else {
             Status::Active
         }
@@ -212,6 +225,37 @@ impl<'a, C: PixelColor, M: Clone> SpinButton<'a, C, M> {
             Side::Plus => self.value.saturating_add(self.step),
         };
         next.clamp(self.min, self.max)
+    }
+
+    fn side_id(&self, side: Side) -> Option<WidgetId> {
+        self.id.map(|base| {
+            let offset = match side {
+                Side::Minus => 1,
+                Side::Plus => 2,
+            };
+            WidgetId::new(base.raw().wrapping_add(offset))
+        })
+    }
+
+    fn focused_side(&self, target: WidgetId) -> Option<Side> {
+        [Side::Minus, Side::Plus]
+            .into_iter()
+            .find(|side| self.side_id(*side) == Some(target))
+    }
+
+    fn ordered_sides(&self) -> [Side; 2] {
+        match self.orientation {
+            SpinOrientation::Horizontal => [Side::Minus, Side::Plus],
+            SpinOrientation::Vertical => [Side::Plus, Side::Minus],
+        }
+    }
+
+    fn emit_change(&self, side: Side) -> Option<M> {
+        if !self.side_enabled(side) {
+            return None;
+        }
+
+        self.on_change.as_ref().map(|cb| cb(self.apply(side)))
     }
 }
 
@@ -292,6 +336,46 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for SpinButton<'a, C, M> {
                 }
             }
         }
+    }
+
+    fn collect_focusable(&self, out: &mut alloc::vec::Vec<WidgetId>) {
+        for side in self.ordered_sides() {
+            if self.side_enabled(side)
+                && let Some(id) = self.side_id(side)
+            {
+                out.push(id);
+            }
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = focused.and_then(|target| self.focused_side(target));
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        let focused_side = self.focused_side(target)?;
+        match action {
+            UiAction::Activate => self.emit_change(focused_side),
+            UiAction::Increment | UiAction::NavigateRight | UiAction::NavigateUp => {
+                self.emit_change(Side::Plus)
+            }
+            UiAction::Decrement | UiAction::NavigateLeft | UiAction::NavigateDown => {
+                self.emit_change(Side::Minus)
+            }
+            _ => None,
+        }
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        let side = self.focused_side(target)?;
+        Some(match side {
+            Side::Minus => self.minus_rect(),
+            Side::Plus => self.plus_rect(),
+        })
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.hit_test(point).and_then(|side| self.side_id(side))
     }
 
     fn draw<'t>(

@@ -1,12 +1,13 @@
-//! Tileview: full-area paged tiles that settle exactly one tile per swipe.
+//! Tileview: paged tiles that settle exactly one tile per swipe.
 //!
-//! Each tile fills the viewport; a horizontal swipe pages left/right and the
-//! shared scroll engine snaps to a tile boundary on release ([`SnapMode::Start`]
-//! with one snap line per tile). Scroll state/momentum are wired exactly as in
-//! `scroll_list`: the host owns a [`ScrollState`], mutates it only in `update`,
-//! and drives momentum with a self-rescheduling [`tick_task`]. The active tile
-//! index is reported via `on_change`, and the snap lines for the tick loop are
-//! captured from the [`ScrollMsg::Release`].
+//! Each tile fills the tileview region beneath the heading; a horizontal swipe
+//! pages left/right and the shared scroll engine snaps to a tile boundary on
+//! release ([`SnapMode::Start`] with one snap line per tile). Scroll
+//! state/momentum are wired exactly as in `scroll_list`: the host owns a
+//! [`ScrollState`], mutates it only in `update`, and drives momentum with a
+//! self-rescheduling [`tick_task`]. The active tile index is reported via
+//! `on_change`, and the snap lines for the tick loop are captured from the
+//! [`ScrollMsg::Release`].
 
 extern crate alloc;
 use alloc::format;
@@ -45,7 +46,7 @@ impl Screen {
         }
     }
 
-    /// One full-bleed colored tile with a centered label.
+    /// One tile-sized colored page with a centered label.
     fn tile(&self, i: usize, color: Rgb565) -> Stack<'static, Rgb565, Msg> {
         Stack::new()
             .push(Divider::new(Length::Fill, Length::Fill).color(color))

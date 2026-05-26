@@ -37,7 +37,7 @@ use embedded_graphics::{
 };
 use zest_core::{
     Constraints, GesturePhase, Length, RenderError, Renderer, ScrollDirection, ScrollMsg,
-    ScrollState, TouchPhase,
+    ScrollState, TouchPhase, UiAction, WidgetId,
 };
 use zest_theme::Theme;
 
@@ -65,6 +65,8 @@ pub struct Roller<'a, C: PixelColor, M: Clone> {
     /// Host's currently selected index (used to colour the centered row when
     /// the drum is at rest and as a fallback before the first scroll).
     selected: usize,
+    /// Stable id used for focus traversal.
+    id: Option<WidgetId>,
     /// Optional font override (defaults to the theme body font).
     font: Option<&'a MonoFont<'a>>,
     /// Width sizing intent.
@@ -73,8 +75,11 @@ pub struct Roller<'a, C: PixelColor, M: Clone> {
     on_scroll: Option<Box<dyn Fn(ScrollMsg) -> M + 'a>>,
     /// Callback fired with the centered index when it changes.
     on_select: Option<Box<dyn Fn(usize) -> M + 'a>>,
+    /// Callback fired with semantic actions while the roller is focused.
+    on_action: Option<Box<dyn Fn(UiAction) -> M + 'a>>,
     /// Cached content height (rows + leading/trailing centering pads).
     content_h: u32,
+    focused: bool,
     _color: PhantomData<C>,
 }
 
@@ -90,11 +95,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
             item_height: DEFAULT_ITEM_HEIGHT,
             visible: DEFAULT_VISIBLE,
             selected: 0,
+            id: None,
             font: None,
             width: Length::Fill,
             on_scroll: None,
             on_select: None,
+            on_action: None,
             content_h: 0,
+            focused: false,
             _color: PhantomData,
         }
     }
@@ -125,6 +133,13 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
     #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = index;
+        self
+    }
+
+    /// Set a stable id so this roller can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -176,6 +191,16 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Roller<'a, C, M> {
         F: Fn(usize) -> M + 'a,
     {
         self.on_select = Some(Box::new(f));
+        self
+    }
+
+    /// Callback fired with semantic actions while the roller is focused.
+    #[must_use]
+    pub fn on_action<F>(mut self, f: F) -> Self
+    where
+        F: Fn(UiAction) -> M + 'a,
+    {
+        self.on_action = Some(Box::new(f));
         self
     }
 
@@ -293,6 +318,45 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
 
     fn mark_pressed(&mut self, _point: Point) {}
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && (!self.options.is_empty())
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        match action {
+            UiAction::Activate => self.on_select.as_ref().map(|cb| cb(self.centered_index())),
+            UiAction::Increment
+            | UiAction::Decrement
+            | UiAction::NavigateUp
+            | UiAction::NavigateDown => self.on_action.as_ref().map(|cb| cb(action)),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        let top_left = self.rect.top_left;
+        let bottom_right =
+            top_left + Point::new(self.rect.size.width as i32, self.rect.size.height as i32);
+        if self.is_focusable()
+            && point.x >= top_left.x
+            && point.x < bottom_right.x
+            && point.y >= top_left.y
+            && point.y < bottom_right.y
+        {
+            self.id
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -356,6 +420,9 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Roller<'a, C, M> {
         }
 
         renderer.pop_clip();
+        if self.focused {
+            renderer.stroke_rect(viewport, theme.accent.base)?;
+        }
         Ok(())
     }
 }

@@ -19,7 +19,7 @@ use alloc::boxed::Box;
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
 use zest_core::{
     Constraints, Length, RenderError, Renderer, ScrollDirection, ScrollMsg, ScrollState,
-    ScrollbarMode, SnapMode, TouchPhase,
+    ScrollbarMode, SnapMode, TouchPhase, UiAction, WidgetId,
 };
 use zest_theme::Theme;
 
@@ -339,6 +339,40 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Container<'a, C, M>
         if let Some(child) = self.child.as_mut() {
             child.mark_pressed(point);
         }
+    }
+
+    fn collect_focusable(&self, out: &mut alloc::vec::Vec<WidgetId>) {
+        if let Some(child) = self.child.as_ref() {
+            child.collect_focusable(out);
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        if let Some(child) = self.child.as_mut() {
+            child.sync_focus(focused);
+        }
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        self.child
+            .as_mut()
+            .and_then(|child| child.route_action(target, action))
+    }
+
+    fn navigate_focus(&self, target: WidgetId, action: UiAction) -> Option<WidgetId> {
+        self.child
+            .as_ref()
+            .and_then(|child| child.navigate_focus(target, action))
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        self.child
+            .as_ref()
+            .and_then(|child| child.focus_rect(target))
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.child.as_ref().and_then(|child| child.focus_at(point))
     }
 
     fn draw<'t>(

@@ -14,7 +14,7 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::Theme;
 
 /// Default per-entry height in pixels.
@@ -32,7 +32,9 @@ struct Entry<M> {
 pub struct Menu<C: PixelColor, M: Clone> {
     rect: Rectangle,
     entries: Vec<Entry<M>>,
+    id: Option<WidgetId>,
     selected: Option<usize>,
+    focused: Option<usize>,
     pressed: Option<usize>,
     row_h: u32,
     width: Length,
@@ -46,7 +48,9 @@ impl<C: PixelColor, M: Clone> Menu<C, M> {
         Self {
             rect: Rectangle::zero(),
             entries: Vec::new(),
+            id: None,
             selected: None,
+            focused: None,
             pressed: None,
             row_h: ROW_H,
             width: Length::Fill,
@@ -69,6 +73,13 @@ impl<C: PixelColor, M: Clone> Menu<C, M> {
     #[must_use]
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = Some(index);
+        self
+    }
+
+    /// Set a stable base id so menu rows can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -111,6 +122,11 @@ impl<C: PixelColor, M: Clone> Menu<C, M> {
         }
         let idx = (dy as u32 / self.row_h) as usize;
         (idx < self.entries.len()).then_some(idx)
+    }
+
+    fn row_id(&self, index: usize) -> Option<WidgetId> {
+        self.id
+            .map(|id| WidgetId::new(id.raw().wrapping_add(index as u64 + 1)))
     }
 }
 
@@ -174,6 +190,38 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for Menu<C, M> {
         }
     }
 
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        for index in 0..self.entries.len() {
+            if let Some(id) = self.row_id(index) {
+                out.push(id);
+            }
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = focused.and_then(|target| {
+            (0..self.entries.len()).find(|index| self.row_id(*index) == Some(target))
+        });
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        let index = (0..self.entries.len()).find(|index| self.row_id(*index) == Some(target))?;
+        match action {
+            UiAction::Activate => Some(self.entries[index].message.clone()),
+            _ => None,
+        }
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        let index =
+            (0..self.entries.len()).find(|candidate| self.row_id(*candidate) == Some(target))?;
+        Some(self.row_rect(index))
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.row_at(point).and_then(|index| self.row_id(index))
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -183,15 +231,21 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for Menu<C, M> {
         let glyph_h = font.character_size.height as i32;
         for (i, e) in self.entries.iter().enumerate() {
             let r = self.row_rect(i);
-            let (bg, fg) = if Some(i) == self.selected {
-                (theme.accent.base, theme.accent.on_base)
+            let (bg, fg, border) = if Some(i) == self.selected {
+                (theme.accent.base, theme.accent.on_base, theme.button.border)
+            } else if Some(i) == self.focused {
+                (theme.button.base, theme.button.on_base, theme.accent.base)
             } else if Some(i) == self.pressed {
-                (theme.button.pressed, theme.button.on_base)
+                (
+                    theme.button.pressed,
+                    theme.button.on_base,
+                    theme.button.border,
+                )
             } else {
-                (theme.button.base, theme.button.on_base)
+                (theme.button.base, theme.button.on_base, theme.button.border)
             };
             renderer.fill_rect(r, bg)?;
-            renderer.stroke_rect(r, theme.button.border)?;
+            renderer.stroke_rect(r, border)?;
             renderer.draw_text(
                 &e.label,
                 Point::new(

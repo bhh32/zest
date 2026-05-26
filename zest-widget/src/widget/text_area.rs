@@ -44,7 +44,7 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     mono_font::MonoFont, pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::Theme;
 
 /// Cursor bar thickness in pixels.
@@ -78,11 +78,14 @@ pub struct TextArea<'a, C: PixelColor, M: Clone> {
     text: Cow<'a, str>,
     cursor: usize,
     placeholder: Cow<'a, str>,
+    id: Option<WidgetId>,
     color: Option<C>,
     cursor_color: Option<C>,
     placeholder_color: Option<C>,
     font: Option<&'a MonoFont<'a>>,
     on_tap: Option<Box<dyn Fn(usize) -> M + 'a>>,
+    on_action: Option<Box<dyn Fn(UiAction) -> M + 'a>>,
+    focused: bool,
     width: Length,
     height: Length,
     _color: PhantomData<C>,
@@ -98,11 +101,14 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
             text: text.into(),
             cursor: 0,
             placeholder: Cow::Borrowed(""),
+            id: None,
             color: None,
             cursor_color: None,
             placeholder_color: None,
             font: None,
             on_tap: None,
+            on_action: None,
+            focused: false,
             width: Length::Fill,
             height: Length::Fill,
             _color: PhantomData,
@@ -121,6 +127,13 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
     #[must_use]
     pub fn placeholder(mut self, text: impl Into<Cow<'a, str>>) -> Self {
         self.placeholder = text.into();
+        self
+    }
+
+    /// Set a stable id so this text area can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -164,6 +177,13 @@ impl<'a, C: PixelColor, M: Clone> TextArea<'a, C, M> {
     #[must_use]
     pub fn on_tap<F: Fn(usize) -> M + 'a>(mut self, f: F) -> Self {
         self.on_tap = Some(Box::new(f));
+        self
+    }
+
+    /// Callback receiving semantic editing/navigation actions while focused.
+    #[must_use]
+    pub fn on_action<F: Fn(UiAction) -> M + 'a>(mut self, f: F) -> Self {
+        self.on_action = Some(Box::new(f));
         self
     }
 
@@ -366,6 +386,30 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
         Some(on_tap(self.index_at(point, font)))
     }
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        self.on_action.as_ref().map(|cb| cb(action))
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -438,6 +482,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TextArea<'a, C, M> {
         }
 
         renderer.pop_clip();
+        if self.focused {
+            renderer.stroke_rect(self.rect, theme.accent.base)?;
+        }
         Ok(())
     }
 }

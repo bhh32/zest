@@ -2,14 +2,12 @@
 //! for embedded touch:
 //!
 //! - **No hover state.** Touch screens have no pointer-over phase.
-//! - **No focus ring.** Resistive touch panels don't have keyboard nav;
-//!   add a `Status::Focused` only if a hardware-button platform lands.
 //! - **No animations / transitions.** Allocate-and-draw budget on an
 //!   ESP32 doesn't have room for them.
 //!
 //! A catalog is a function on the [`Theme`](crate::Theme): given a
 //! widget *class* (variant — `Standard`, `Suggested`, `Destructive`,
-//! …) and a *status* (`Active`, `Pressed`, `Disabled`), return a
+//! …) and a *status* (`Active`, `Focused`, `Pressed`, `Disabled`), return a
 //! resolved [`ButtonAppearance`] the widget can paint directly.
 //! Widgets never reach into the theme's `Component`/`Container` fields;
 //! they call the catalog method.
@@ -23,6 +21,8 @@ use embedded_graphics::pixelcolor::PixelColor;
 pub enum Status {
     /// Resting state — not pressed, not disabled.
     Active,
+    /// Focused through non-touch traversal.
+    Focused,
     /// Currently being touched.
     Pressed,
     /// No-op state (e.g. button has no `on_press`).

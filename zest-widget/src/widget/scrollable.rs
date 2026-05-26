@@ -17,7 +17,7 @@ use alloc::{boxed::Box, vec::Vec};
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
 use zest_core::{
     Constraints, GesturePhase, Length, RenderError, Renderer, ScrollDirection, ScrollMsg,
-    ScrollState, ScrollbarMode, SnapMode, TouchPhase, UNBOUNDED,
+    ScrollState, ScrollbarMode, SnapMode, TouchPhase, UNBOUNDED, UiAction, WidgetId,
 };
 use zest_theme::Theme;
 
@@ -223,5 +223,29 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Scrollable<'a, C, M
             self.rect,
             self.content,
         )
+    }
+
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        self.child.collect_focusable(out);
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.child.sync_focus(focused);
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        self.child.route_action(target, action)
+    }
+
+    fn navigate_focus(&self, target: WidgetId, action: UiAction) -> Option<WidgetId> {
+        self.child.navigate_focus(target, action)
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        self.child.focus_rect(target)
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.child.focus_at(point)
     }
 }

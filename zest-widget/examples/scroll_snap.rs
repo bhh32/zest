@@ -1,7 +1,7 @@
-//! Snap-to-center carousel: a horizontal `Column`-of-cards that settles each
+//! Snap-to-center scroller: a vertical stack of cards that settles each
 //! release so a card lands centered in the viewport.
 //!
-//! Demonstrates [`SnapMode::Center`]: dragging pans the row of cards 1:1, and
+//! Demonstrates [`SnapMode::Center`]: dragging pans the card stack 1:1, and
 //! on release the spring settles to the nearest snap line (a card center
 //! aligned to the viewport center). The snap lines for the animation tick are
 //! captured from the [`ScrollMsg::Release`] the container emits, so `update()`
@@ -53,18 +53,13 @@ impl ScreenView<Rgb565, Msg> for Screen {
     fn view(&self) -> Element<'_, Rgb565, Msg> {
         let label = match self.tapped {
             Some(i) => format!("Card {i}"),
-            None => "Swipe — releases snap to center".into(),
+            None => "Swipe vertically — releases snap to center".into(),
         };
         let heading = Text::new(label)
             .align_x(Horizontal::Center)
             .font(self.theme.typography.heading)
             .color(self.theme.background.on_base);
 
-        // Note: a horizontal carousel uses ScrollDirection::Horizontal; this
-        // Column lays cards out vertically but scrolls/snaps on the chosen
-        // axis. For a horizontal feel we use a Row of cards wrapped in a
-        // scrollable Column-style host; here the Column hosts tall cards and
-        // snaps vertically to keep the example to one container type.
         let mut carousel = Column::new()
             .spacing(8)
             .height(Length::Fill)

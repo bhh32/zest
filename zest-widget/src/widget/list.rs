@@ -29,7 +29,7 @@ use embedded_graphics::{
 };
 use zest_core::{
     Constraints, Length, RenderError, Renderer, ScrollDirection, ScrollMsg, ScrollState,
-    ScrollbarMode, SnapMode, TouchPhase,
+    ScrollbarMode, SnapMode, TouchPhase, UiAction, WidgetId,
 };
 use zest_theme::Theme;
 
@@ -49,6 +49,7 @@ pub const ROW_GAP: u32 = 8;
 /// [`Button`](crate::Button) so drag-off-to-cancel and tap-vs-scroll work.
 pub struct ListRow<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
+    id: Option<WidgetId>,
     index: usize,
     leading: Option<String>,
     label: String,
@@ -59,6 +60,7 @@ pub struct ListRow<'a, C: PixelColor, M: Clone> {
     divider: bool,
     /// Whether this row should render as selected (host-driven highlight).
     selected: bool,
+    focused: bool,
     pressed: bool,
     width: Length,
     height: Length,
@@ -69,6 +71,7 @@ impl<'a, C: PixelColor, M: Clone> ListRow<'a, C, M> {
     fn new(index: usize, label: impl Into<String>) -> Self {
         Self {
             rect: Rectangle::zero(),
+            id: None,
             index,
             leading: None,
             label: label.into(),
@@ -76,6 +79,7 @@ impl<'a, C: PixelColor, M: Clone> ListRow<'a, C, M> {
             on_select: None,
             divider: false,
             selected: false,
+            focused: false,
             pressed: false,
             width: Length::Fill,
             height: Length::Fixed(ROW_HEIGHT),
@@ -146,6 +150,37 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for ListRow<'a, C, M> {
         }
     }
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.is_enabled()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        match action {
+            UiAction::Activate => self.on_select.as_ref().map(|cb| cb(self.index)),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -160,6 +195,12 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for ListRow<'a, C, M> {
         } else {
             renderer.fill_rect(self.rect, theme.primary.base)?;
         }
+        let border = if self.focused {
+            theme.accent.base
+        } else {
+            theme.primary.divider
+        };
+        renderer.stroke_rect(self.rect, border)?;
 
         let text_color = if self.pressed || self.selected {
             theme.accent.on_base
@@ -227,6 +268,7 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for ListRow<'a, C, M> {
 /// same builders a [`Column`] exposes. A tapped row emits the
 /// [`List::on_select`] message carrying its zero-based index.
 pub struct List<'a, C: PixelColor, M: Clone> {
+    id: Option<WidgetId>,
     /// Pending rows, materialized into the inner column at layout time.
     rows: Vec<ListRow<'a, C, M>>,
     /// Shared select callback handed to each row.
@@ -254,6 +296,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
     /// between rows.
     pub fn new() -> Self {
         Self {
+            id: None,
             rows: Vec::new(),
             on_select: None,
             selected: None,
@@ -281,6 +324,13 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
+        self
+    }
+
+    /// Set a stable base id so rows can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -438,8 +488,10 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> List<'a, C, M> {
 
         let dividers = self.dividers;
         let selected = self.selected;
+        let id = self.id;
         let on_select = self.on_select.clone();
         for mut row in core::mem::take(&mut self.rows) {
+            row.id = id.map(|base| WidgetId::new(base.raw().wrapping_add(row.index as u64 + 1)));
             row.divider = dividers;
             row.selected = Some(row.index) == selected;
             row.on_select = on_select.clone();

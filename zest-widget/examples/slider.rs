@@ -11,6 +11,9 @@ use core::fmt::Write as _;
 use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 
+const BRIGHTNESS_ID: WidgetId = WidgetId::new(0x640);
+const VOLUME_ID: WidgetId = WidgetId::new(0x641);
+
 #[derive(Clone)]
 enum Msg {
     SetBrightness(f32),
@@ -67,6 +70,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             )
             .push(
                 Slider::new(self.brightness)
+                    .id(BRIGHTNESS_ID)
                     .range(0.0, 1.0)
                     .on_change(Msg::SetBrightness)
                     .height(Length::Fixed(24)),
@@ -78,6 +82,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             )
             .push(
                 Slider::new(self.volume)
+                    .id(VOLUME_ID)
                     .range(0.0, 100.0)
                     .on_change(Msg::SetVolume)
                     .height(Length::Fixed(24)),

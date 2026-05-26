@@ -35,7 +35,7 @@ use embedded_graphics::{
 };
 use zest_core::{
     Constraints, Length, RenderError, Renderer, ScrollDirection, ScrollMsg, ScrollState,
-    ScrollbarMode, SnapMode, TouchPhase,
+    ScrollbarMode, SnapMode, TouchPhase, UiAction, WidgetId,
 };
 use zest_theme::Theme;
 
@@ -54,6 +54,8 @@ pub struct TableRow<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
     /// This row's index within the table body.
     row: usize,
+    /// Stable id base for this row's focusable cells.
+    base_id: Option<WidgetId>,
     /// Borrowed cell strings, one per column.
     cells: &'a [&'a str],
     /// Total column count (so short rows still align to the grid).
@@ -64,6 +66,8 @@ pub struct TableRow<'a, C: PixelColor, M: Clone> {
     alternate: bool,
     /// `(row, col)` of a host-selected cell to highlight, if it lies here.
     selected_col: Option<usize>,
+    /// Column index currently focused.
+    focused_col: Option<usize>,
     /// Column index currently pressed (set on Down, cleared on Up/cancel).
     pressed_col: Option<usize>,
     width: Length,
@@ -76,11 +80,13 @@ impl<'a, C: PixelColor, M: Clone> TableRow<'a, C, M> {
         Self {
             rect: Rectangle::zero(),
             row,
+            base_id: None,
             cells,
             columns,
             on_select: None,
             alternate: false,
             selected_col: None,
+            focused_col: None,
             pressed_col: None,
             width: Length::Fill,
             height: Length::Fixed(TABLE_ROW_HEIGHT),
@@ -108,6 +114,11 @@ impl<'a, C: PixelColor, M: Clone> TableRow<'a, C, M> {
         let col_w = self.col_width().max(1) as i32;
         let col = ((point.x - tl.x) / col_w) as usize;
         Some(col.min(self.columns.saturating_sub(1)))
+    }
+
+    fn cell_id(&self, col: usize) -> Option<WidgetId> {
+        self.base_id
+            .map(|base| WidgetId::new(base.raw().wrapping_add(col as u64)))
     }
 }
 
@@ -169,6 +180,46 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TableRow<'a, C, M> {
         }
     }
 
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        if !self.is_enabled() {
+            return;
+        }
+        for col in 0..self.columns {
+            if let Some(id) = self.cell_id(col) {
+                out.push(id);
+            }
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused_col = focused
+            .and_then(|target| (0..self.columns).find(|col| self.cell_id(*col) == Some(target)));
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        let col = (0..self.columns).find(|candidate| self.cell_id(*candidate) == Some(target))?;
+        match action {
+            UiAction::Activate => self.on_select.as_ref().map(|cb| cb(self.row, col)),
+            _ => None,
+        }
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        let col = (0..self.columns).find(|candidate| self.cell_id(*candidate) == Some(target))?;
+        let col_w = self.col_width();
+        Some(Rectangle::new(
+            Point::new(
+                self.rect.top_left.x + (col_w * col as u32) as i32,
+                self.rect.top_left.y,
+            ),
+            Size::new(col_w, self.rect.size.height),
+        ))
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.col_at(point).and_then(|col| self.cell_id(col))
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -202,6 +253,9 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TableRow<'a, C, M> {
             } else {
                 theme.primary.on_base
             };
+            if self.focused_col == Some(col) {
+                renderer.stroke_rect(cell_rect, theme.accent.base)?;
+            }
 
             if let Some(text) = self.cells.get(col) {
                 renderer.draw_text(
@@ -242,6 +296,8 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for TableRow<'a, C, M> {
 /// with the same builders [`Column`] exposes. A tapped body cell emits the
 /// [`Table::on_select`] message carrying `(row, col)`.
 pub struct Table<'a, C: PixelColor, M: Clone> {
+    /// Stable base id for body cells.
+    id: Option<WidgetId>,
     /// Optional header cells (drawn above the scrolling body).
     header: Option<&'a [&'a str]>,
     /// Body rows, each a borrowed slice of cell strings.
@@ -278,6 +334,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
             header: None,
             body: Vec::new(),
             columns: 0,
+            id: None,
             on_select: None,
             selected: None,
             striped: true,
@@ -305,6 +362,13 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
     #[must_use]
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.height = height.into();
+        self
+    }
+
+    /// Set a stable base id so body cells can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -451,6 +515,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
         let on_select = self.on_select.clone();
         for (i, cells) in self.body.iter().copied().enumerate() {
             let mut row = TableRow::new(i, cells, columns);
+            row.base_id = self.row_base_id(i);
             row.alternate = striped && (i % 2 == 1);
             row.selected_col = match selected {
                 Some((r, c)) if r == i => Some(c),
@@ -460,6 +525,34 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Table<'a, C, M> {
             col = col.push(row);
         }
         col
+    }
+
+    fn row_base_id(&self, row: usize) -> Option<WidgetId> {
+        let columns = self.columns.max(1) as u64;
+        self.id.map(|base| {
+            WidgetId::new(
+                base.raw()
+                    .wrapping_add(1)
+                    .wrapping_add(row as u64 * columns),
+            )
+        })
+    }
+
+    fn cell_id(&self, row: usize, col: usize) -> Option<WidgetId> {
+        self.row_base_id(row)
+            .map(|base| WidgetId::new(base.raw().wrapping_add(col as u64)))
+    }
+
+    fn coords_for(&self, target: WidgetId) -> Option<(usize, usize)> {
+        let columns = self.columns.max(1);
+        for row in 0..self.body.len() {
+            for col in 0..columns {
+                if self.cell_id(row, col) == Some(target) {
+                    return Some((row, col));
+                }
+            }
+        }
+        None
     }
 }
 
@@ -517,6 +610,45 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Table<'a, C, M> {
         if let Some(body) = self.inner.as_mut() {
             body.mark_pressed(point);
         }
+    }
+
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        if let Some(body) = self.inner.as_ref() {
+            body.collect_focusable(out);
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        if let Some(body) = self.inner.as_mut() {
+            body.sync_focus(focused);
+        }
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        self.inner
+            .as_mut()
+            .and_then(|body| body.route_action(target, action))
+    }
+
+    fn navigate_focus(&self, target: WidgetId, action: UiAction) -> Option<WidgetId> {
+        let (row, col) = self.coords_for(target)?;
+        let columns = self.columns.max(1);
+        let (next_row, next_col) = match action {
+            UiAction::NavigateLeft => (row, col.saturating_sub(1)),
+            UiAction::NavigateRight => (row, (col + 1).min(columns.saturating_sub(1))),
+            UiAction::NavigateUp => (row.saturating_sub(1), col),
+            UiAction::NavigateDown => ((row + 1).min(self.body.len().saturating_sub(1)), col),
+            _ => return None,
+        };
+        self.cell_id(next_row, next_col)
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        self.inner.as_ref().and_then(|body| body.focus_rect(target))
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.inner.as_ref().and_then(|body| body.focus_at(point))
     }
 
     fn draw<'t>(

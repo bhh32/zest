@@ -16,13 +16,16 @@ use embedded_graphics::{
 };
 use embedded_graphics_simulator::{
     OutputSettings, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-    sdl2::MouseButton,
+    sdl2::{Keycode, MouseButton, MouseWheelDirection},
 };
 use std::{convert::Infallible, vec::Vec};
 use tiny_skia::{
     Color as SkColor, FillRule, Mask, Paint, PathBuilder, Pixmap, Rect as SkRect, Stroke, Transform,
 };
-use zest_core::{InputEvent, Platform, RenderError, Renderer, TouchEvent, TouchPhase};
+use zest_core::{
+    ButtonState, DirtyRegion, EncoderEvent, InputEvent, Key, KeyEvent, Platform,
+    PlatformCapabilities, RenderError, Renderer, TouchEvent, TouchPhase,
+};
 
 /// Default display width — matches the CYD R3 panel.
 pub const DEFAULT_WIDTH: u32 = 320;
@@ -43,6 +46,7 @@ pub struct SimulatorPlatformBuilder {
     scale: u32,
     pixel_spacing: u32,
     poll_ms: u64,
+    show_dirty: bool,
 }
 
 impl SimulatorPlatformBuilder {
@@ -55,6 +59,7 @@ impl SimulatorPlatformBuilder {
             scale: DEFAULT_SCALE,
             pixel_spacing: DEFAULT_PIXEL_SPACING,
             poll_ms: DEFAULT_POLL_MS,
+            show_dirty: false,
         }
     }
 
@@ -91,6 +96,13 @@ impl SimulatorPlatformBuilder {
         self
     }
 
+    /// Draw an outline over dirty rectangles after each partial redraw.
+    #[must_use]
+    pub fn show_dirty(mut self, show_dirty: bool) -> Self {
+        self.show_dirty = show_dirty;
+        self
+    }
+
     /// Build.
     #[must_use]
     pub fn build(self) -> SimulatorPlatform {
@@ -106,6 +118,7 @@ impl SimulatorPlatformBuilder {
             size: self.size,
             mouse_down: false,
             poll_ms: self.poll_ms,
+            show_dirty: self.show_dirty,
             pending: None,
         }
     }
@@ -119,6 +132,7 @@ pub struct SimulatorPlatform {
     size: Size,
     mouse_down: bool,
     poll_ms: u64,
+    show_dirty: bool,
     /// One-slot buffer holding a discrete Down/Up event that arrived in the
     /// same poll batch as coalesced moves, so it is delivered on the next
     /// `next_event` call rather than dropped.
@@ -136,6 +150,90 @@ impl SimulatorPlatform {
     #[must_use]
     pub fn builder(title: impl Into<String>) -> SimulatorPlatformBuilder {
         SimulatorPlatformBuilder::new(title)
+    }
+
+    fn key_event(keycode: Keycode, repeat: bool, pressed: bool) -> Option<InputEvent> {
+        let state = if pressed {
+            if repeat {
+                ButtonState::Repeated
+            } else {
+                ButtonState::Pressed
+            }
+        } else {
+            ButtonState::Released
+        };
+
+        let key = match keycode {
+            Keycode::Return | Keycode::KpEnter => Key::Enter,
+            Keycode::Tab => Key::Tab,
+            Keycode::Backspace => Key::Backspace,
+            Keycode::Delete => Key::Delete,
+            Keycode::Left => Key::Left,
+            Keycode::Right => Key::Right,
+            Keycode::Up => Key::Up,
+            Keycode::Down => Key::Down,
+            Keycode::Home => Key::Home,
+            Keycode::End => Key::End,
+            Keycode::PageUp => Key::PageUp,
+            Keycode::PageDown => Key::PageDown,
+            Keycode::Space => Key::Char(' '),
+            Keycode::A => Key::Char('a'),
+            Keycode::B => Key::Char('b'),
+            Keycode::C => Key::Char('c'),
+            Keycode::D => Key::Char('d'),
+            Keycode::E => Key::Char('e'),
+            Keycode::F => Key::Char('f'),
+            Keycode::G => Key::Char('g'),
+            Keycode::H => Key::Char('h'),
+            Keycode::I => Key::Char('i'),
+            Keycode::J => Key::Char('j'),
+            Keycode::K => Key::Char('k'),
+            Keycode::L => Key::Char('l'),
+            Keycode::M => Key::Char('m'),
+            Keycode::N => Key::Char('n'),
+            Keycode::O => Key::Char('o'),
+            Keycode::P => Key::Char('p'),
+            Keycode::Q => Key::Char('q'),
+            Keycode::R => Key::Char('r'),
+            Keycode::S => Key::Char('s'),
+            Keycode::T => Key::Char('t'),
+            Keycode::U => Key::Char('u'),
+            Keycode::V => Key::Char('v'),
+            Keycode::W => Key::Char('w'),
+            Keycode::X => Key::Char('x'),
+            Keycode::Y => Key::Char('y'),
+            Keycode::Z => Key::Char('z'),
+            Keycode::Num0 | Keycode::Kp0 => Key::Char('0'),
+            Keycode::Num1 | Keycode::Kp1 => Key::Char('1'),
+            Keycode::Num2 | Keycode::Kp2 => Key::Char('2'),
+            Keycode::Num3 | Keycode::Kp3 => Key::Char('3'),
+            Keycode::Num4 | Keycode::Kp4 => Key::Char('4'),
+            Keycode::Num5 | Keycode::Kp5 => Key::Char('5'),
+            Keycode::Num6 | Keycode::Kp6 => Key::Char('6'),
+            Keycode::Num7 | Keycode::Kp7 => Key::Char('7'),
+            Keycode::Num8 | Keycode::Kp8 => Key::Char('8'),
+            Keycode::Num9 | Keycode::Kp9 => Key::Char('9'),
+            _ => return None,
+        };
+
+        Some(InputEvent::Key(KeyEvent { key, state }))
+    }
+
+    fn encoder_event(scroll_delta: Point, direction: MouseWheelDirection) -> Option<InputEvent> {
+        let axis = if scroll_delta.y != 0 {
+            scroll_delta.y
+        } else {
+            scroll_delta.x
+        };
+        if axis == 0 {
+            return None;
+        }
+
+        let delta = match direction {
+            MouseWheelDirection::Flipped => -axis,
+            _ => axis,
+        };
+        Some(InputEvent::Encoder(EncoderEvent { delta }))
     }
 }
 
@@ -200,6 +298,28 @@ impl Platform for SimulatorPlatform {
                     SimulatorEvent::MouseMove { point } if self.mouse_down => {
                         latest_move = Some(point);
                     }
+                    SimulatorEvent::KeyDown {
+                        keycode, repeat, ..
+                    } => {
+                        if let Some(event) = Self::key_event(keycode, repeat, true) {
+                            return Some(event);
+                        }
+                    }
+                    SimulatorEvent::KeyUp {
+                        keycode, repeat, ..
+                    } => {
+                        if let Some(event) = Self::key_event(keycode, repeat, false) {
+                            return Some(event);
+                        }
+                    }
+                    SimulatorEvent::MouseWheel {
+                        scroll_delta,
+                        direction,
+                    } => {
+                        if let Some(event) = Self::encoder_event(scroll_delta, direction) {
+                            return Some(event);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -243,8 +363,103 @@ impl Platform for SimulatorPlatform {
         Ok(())
     }
 
+    async fn render_with_dirty<F>(
+        &mut self,
+        dirty: &DirtyRegion,
+        draw: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnOnce(&mut dyn Renderer<Self::Color>) -> Result<(), RenderError>,
+    {
+        self.pixmap.fill(SkColor::BLACK);
+        {
+            let mut renderer = TinySkiaRenderer {
+                pixmap: &mut self.pixmap,
+                clip_mask: None,
+                clip_rect: None,
+                clip_stack: Vec::new(),
+            };
+            let _ = draw(&mut renderer);
+        }
+
+        match dirty {
+            DirtyRegion::None => {}
+            DirtyRegion::Full => self.blit_full(),
+            DirtyRegion::Rects(rects) => {
+                if self.show_dirty {
+                    self.overlay_dirty(rects);
+                }
+                for rect in rects {
+                    self.blit_rect(*rect);
+                }
+            }
+        }
+
+        self.window.update(&self.display);
+        Ok(())
+    }
+
     fn viewport(&self) -> Size {
         self.size
+    }
+
+    fn capabilities(&self) -> PlatformCapabilities {
+        PlatformCapabilities {
+            supports_clip: true,
+            supports_partial_flush: true,
+            supports_semantic_input: false,
+            prefers_full_redraw: false,
+        }
+    }
+}
+
+impl SimulatorPlatform {
+    fn blit_full(&mut self) {
+        let area = Rectangle::new(Point::zero(), self.size);
+        let data = self.pixmap.data();
+        let colors = (0..(self.size.width * self.size.height) as usize).map(|i| {
+            let off = i * 4;
+            rgba8_to_rgb565(data[off], data[off + 1], data[off + 2])
+        });
+        let _ = self.display.fill_contiguous(&area, colors);
+    }
+
+    fn blit_rect(&mut self, rect: Rectangle) {
+        let x0 = rect.top_left.x.max(0) as u32;
+        let y0 = rect.top_left.y.max(0) as u32;
+        let x1 = (rect.top_left.x + rect.size.width as i32).clamp(0, self.size.width as i32) as u32;
+        let y1 =
+            (rect.top_left.y + rect.size.height as i32).clamp(0, self.size.height as i32) as u32;
+        if x1 <= x0 || y1 <= y0 {
+            return;
+        }
+
+        let width = x1 - x0;
+        let height = y1 - y0;
+        let area = Rectangle::new(Point::new(x0 as i32, y0 as i32), Size::new(width, height));
+        let stride = self.size.width as usize * 4;
+        let data = self.pixmap.data();
+        let mut colors = Vec::with_capacity((width * height) as usize);
+        for y in y0..y1 {
+            let row = y as usize * stride;
+            for x in x0..x1 {
+                let off = row + x as usize * 4;
+                colors.push(rgba8_to_rgb565(data[off], data[off + 1], data[off + 2]));
+            }
+        }
+        let _ = self.display.fill_contiguous(&area, colors.into_iter());
+    }
+
+    fn overlay_dirty(&mut self, rects: &[Rectangle]) {
+        let mut renderer = TinySkiaRenderer {
+            pixmap: &mut self.pixmap,
+            clip_mask: None,
+            clip_rect: None,
+            clip_stack: Vec::new(),
+        };
+        for rect in rects {
+            let _ = renderer.stroke_rect(*rect, Rgb565::MAGENTA);
+        }
     }
 }
 

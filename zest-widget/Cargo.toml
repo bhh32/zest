@@ -90,8 +90,8 @@ name = "arc"
 path = "examples/arc.rs"
 
 [[example]]
-name = "scale"
-path = "examples/scale.rs"
+name = "gauge"
+path = "examples/gauge.rs"
 
 [[example]]
 name = "spinner"
@@ -108,6 +108,10 @@ path = "examples/switch.rs"
 [[example]]
 name = "slider"
 path = "examples/slider.rs"
+
+[[example]]
+name = "spin_button"
+path = "examples/spin_button.rs"
 
 [[example]]
 name = "progress_bar"
@@ -160,6 +164,10 @@ path = "examples/tileview.rs"
 [[example]]
 name = "dropdown"
 path = "examples/dropdown.rs"
+
+[[example]]
+name = "focus_navigation"
+path = "examples/focus_navigation.rs"
 
 [[example]]
 name = "message_box"

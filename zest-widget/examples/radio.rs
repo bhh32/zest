@@ -11,6 +11,10 @@ use alloc::string::ToString;
 use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 
+const SMALL_ID: WidgetId = WidgetId::new(0x620);
+const MEDIUM_ID: WidgetId = WidgetId::new(0x621);
+const LARGE_ID: WidgetId = WidgetId::new(0x622);
+
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum Choice {
     Small,
@@ -45,7 +49,14 @@ impl Screen {
     }
 
     fn option(&self, choice: Choice) -> RadioButton<Rgb565, Pick> {
+        let id = match choice {
+            Choice::Small => SMALL_ID,
+            Choice::Medium => MEDIUM_ID,
+            Choice::Large => LARGE_ID,
+        };
+
         RadioButton::new(self.selected == choice)
+            .id(id)
             .label(choice.label())
             .on_select(Pick(choice))
             .height(Length::Fixed(24))

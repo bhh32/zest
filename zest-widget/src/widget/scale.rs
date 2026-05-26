@@ -1,4 +1,5 @@
-//! Passive scale: evenly spaced tick marks with optional numeric labels.
+//! Passive scale: evenly spaced tick marks with optional numeric labels
+//! and an optional value marker.
 //!
 //! Two modes:
 //! - [`ScaleMode::Linear`] draws a ruler: a baseline with major/minor
@@ -8,7 +9,8 @@
 //!   drawn via [`Renderer::stroke_arc`].
 //!
 //! The host supplies the value range, the tick counts, and (optionally)
-//! whether to label major ticks with their numeric value. The widget is
+//! whether to label major ticks with their numeric value. A scale can
+//! also highlight one value with a marker line. The widget is
 //! non-interactive. Pair it with [`Arc`](super::arc::Arc) to build a
 //! labelled gauge.
 
@@ -45,8 +47,10 @@ pub struct Scale<'a, C: PixelColor, M: Clone> {
     /// Circular-mode geometry (ignored in linear mode).
     start_deg: i32,
     sweep_deg: i32,
+    marker_value: Option<f32>,
     color: Option<C>,
     label_color: Option<C>,
+    marker_color: Option<C>,
     font: Option<&'a MonoFont<'a>>,
     w: Length,
     h: Length,
@@ -68,8 +72,10 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
             labels: true,
             start_deg: 225,
             sweep_deg: -270,
+            marker_value: None,
             color: None,
             label_color: None,
+            marker_color: None,
             font: None,
             w: Length::Fill,
             h: Length::Fill,
@@ -120,6 +126,13 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         self
     }
 
+    /// Highlight one value on the scale with a marker line.
+    #[must_use]
+    pub fn value_marker(mut self, value: f32) -> Self {
+        self.marker_value = Some(value);
+        self
+    }
+
     /// Override tick/baseline color (default:
     /// `theme.background.on_base`).
     #[must_use]
@@ -132,6 +145,13 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
     #[must_use]
     pub fn label_color(mut self, color: C) -> Self {
         self.label_color = Some(color);
+        self
+    }
+
+    /// Override marker color (default: `theme.accent.base`).
+    #[must_use]
+    pub fn marker_color(mut self, color: C) -> Self {
+        self.marker_color = Some(color);
         self
     }
 
@@ -174,6 +194,16 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
     /// Total tick count between (and including) the two ends.
     fn total_ticks(&self) -> u32 {
         self.major_ticks * (self.minor_per_major + 1)
+    }
+
+    fn marker_fraction(&self) -> Option<f32> {
+        let value = self.marker_value?;
+        let span = self.max - self.min;
+        if span <= 0.0 {
+            Some(0.0)
+        } else {
+            Some(((value - self.min) / span).clamp(0.0, 1.0))
+        }
     }
 }
 
@@ -219,11 +249,12 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Scale<'a, C, M> {
     ) -> Result<(), RenderError> {
         let tick = self.color.unwrap_or(theme.background.on_base);
         let label_color = self.label_color.unwrap_or(theme.palette.neutral_2);
+        let marker = self.marker_color.unwrap_or(theme.accent.base);
         let font = self.font.unwrap_or(theme.typography.caption);
 
         match self.mode {
-            ScaleMode::Linear => self.draw_linear(renderer, tick, label_color, font),
-            ScaleMode::Circular => self.draw_circular(renderer, tick, label_color, font),
+            ScaleMode::Linear => self.draw_linear(renderer, tick, label_color, marker, font),
+            ScaleMode::Circular => self.draw_circular(renderer, tick, label_color, marker, font),
         }
     }
 }
@@ -234,6 +265,7 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         renderer: &mut dyn Renderer<C>,
         tick: C,
         label_color: C,
+        marker: C,
         font: &MonoFont<'_>,
     ) -> Result<(), RenderError> {
         let r = self.rect;
@@ -279,6 +311,16 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
                 )?;
             }
         }
+
+        if let Some(frac) = self.marker_fraction() {
+            let x = left + (width as f32 * frac) as i32;
+            renderer.stroke_line(
+                Point::new(x, baseline_y.saturating_sub(3)),
+                Point::new(x, baseline_y + major_len + 4),
+                marker,
+                2,
+            )?;
+        }
         Ok(())
     }
 
@@ -287,6 +329,7 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
         renderer: &mut dyn Renderer<C>,
         tick: C,
         label_color: C,
+        marker: C,
         font: &MonoFont<'_>,
     ) -> Result<(), RenderError> {
         let r = self.rect;
@@ -337,6 +380,22 @@ impl<'a, C: PixelColor, M: Clone> Scale<'a, C, M> {
                 );
                 renderer.draw_text(&text, lp, font, label_color, Alignment::Center)?;
             }
+        }
+
+        if let Some(frac) = self.marker_fraction() {
+            let deg = self.start_deg + (self.sweep_deg as f32 * frac) as i32;
+            let (s, c) = arc_sin_cos(deg);
+            let marker_outer = outer_r;
+            let marker_inner = (outer_r - major_len as f32 - 6.0).max(0.0);
+            let p_outer = Point::new(
+                center.x + (c * marker_outer) as i32,
+                center.y - (s * marker_outer) as i32,
+            );
+            let p_inner = Point::new(
+                center.x + (c * marker_inner) as i32,
+                center.y - (s * marker_inner) as i32,
+            );
+            renderer.stroke_line(p_outer, p_inner, marker, 2)?;
         }
         Ok(())
     }

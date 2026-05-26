@@ -15,6 +15,7 @@ use zest::zest_theme::theme::dark;
 
 /// Header cells, borrowed by the table for the lifetime of the screen.
 const HEADER: &[&str] = &["ID", "Name", "Score"];
+const TABLE_ID: WidgetId = WidgetId::new(0x730);
 
 /// Body rows, each a borrowed slice of cell strings.
 const ROWS: &[&[&str]] = &[
@@ -73,7 +74,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
     fn view(&self) -> Element<'_, Rgb565, Msg> {
         let label: String = match self.selected {
             Some((r, c)) => format!("Tapped row {r}, col {c}"),
-            None => "Drag to scroll, tap a cell".into(),
+            None => "Tab or arrows move focus. Enter selects a cell.".into(),
         };
         let heading = Text::new(label)
             .align_x(Horizontal::Center)
@@ -81,6 +82,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .color(self.theme.background.on_base);
 
         let mut table = Table::new()
+            .id(TABLE_ID)
             .height(Length::Fill)
             .header(HEADER)
             .rows(ROWS)

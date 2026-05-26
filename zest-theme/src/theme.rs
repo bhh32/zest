@@ -84,13 +84,21 @@ impl<'a, C: PixelColor> ButtonCatalog<C> for Theme<'a, C> {
         let comp = self.component_for(class);
         let bg = match status {
             Status::Active => comp.base,
+            Status::Focused => comp.base,
             Status::Pressed => comp.pressed,
             Status::Disabled => comp.disabled,
         };
         // Text/Icon classes paint no fill and no border by convention.
         let (background, border) = match class {
             ButtonClass::Text | ButtonClass::Icon => (None, None),
-            _ => (Some(bg), Some(comp.border)),
+            _ => {
+                let border = if status == Status::Focused {
+                    self.accent.base
+                } else {
+                    comp.border
+                };
+                (Some(bg), Some(border))
+            }
         };
         ButtonAppearance {
             background,

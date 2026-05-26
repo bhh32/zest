@@ -20,7 +20,7 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase};
+use zest_core::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
 use zest_theme::Theme;
 
 /// Side length of the box glyph in pixels.
@@ -34,7 +34,9 @@ pub struct Checkbox<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
     checked: bool,
     label: Option<String>,
+    id: Option<WidgetId>,
     on_toggle: Option<Box<dyn Fn(bool) -> M + 'a>>,
+    focused: bool,
     pressed: bool,
     width: Length,
     height: Length,
@@ -49,7 +51,9 @@ impl<'a, C: PixelColor, M: Clone> Checkbox<'a, C, M> {
             rect: Rectangle::zero(),
             checked,
             label: None,
+            id: None,
             on_toggle: None,
+            focused: false,
             pressed: false,
             width: Length::Shrink,
             height: Length::Fixed(BOX_SIZE),
@@ -69,6 +73,13 @@ impl<'a, C: PixelColor, M: Clone> Checkbox<'a, C, M> {
     #[must_use]
     pub fn on_toggle<F: Fn(bool) -> M + 'a>(mut self, f: F) -> Self {
         self.on_toggle = Some(Box::new(f));
+        self
+    }
+
+    /// Set a stable id so this checkbox can participate in focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -169,6 +180,37 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
         }
     }
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.is_enabled()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        match action {
+            UiAction::Activate => self.on_toggle.as_ref().map(|cb| cb(!self.checked)),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -183,8 +225,13 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
             } else {
                 accent.base
             };
+            let border = if self.focused {
+                accent.base
+            } else {
+                accent.border
+            };
             renderer.fill_rect(box_rect, fill)?;
-            renderer.stroke_rect(box_rect, accent.border)?;
+            renderer.stroke_rect(box_rect, border)?;
             // Draw a check mark as two strokes forming a tick.
             let x = box_rect.top_left.x;
             let y = box_rect.top_left.y;
@@ -207,8 +254,13 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
             } else {
                 theme.background.base
             };
+            let border = if self.focused {
+                accent.base
+            } else {
+                accent.border
+            };
             renderer.fill_rect(box_rect, bg)?;
-            renderer.stroke_rect(box_rect, accent.border)?;
+            renderer.stroke_rect(box_rect, border)?;
         }
 
         if let Some(label) = &self.label {
@@ -217,10 +269,12 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Checkbox<'a, C, M> {
             let center_y = self.rect.top_left.y
                 + self.rect.size.height as i32 / 2
                 + font.character_size.height as i32 / 3;
-            let color = if self.is_enabled() {
-                theme.background.on_base
-            } else {
+            let color = if !self.is_enabled() {
                 theme.palette.neutral_2
+            } else if self.focused {
+                theme.accent.base
+            } else {
+                theme.background.on_base
             };
             renderer.draw_text(
                 label,

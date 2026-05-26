@@ -1,6 +1,6 @@
 use super::Widget;
-use crate::{Constraints, Length, RenderError, Renderer, TouchPhase};
-use alloc::boxed::Box;
+use crate::{Constraints, Length, RenderError, Renderer, TouchPhase, UiAction, WidgetId};
+use alloc::{boxed::Box, vec::Vec};
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*, primitives::Rectangle};
 use zest_theme::Theme;
 
@@ -45,6 +45,42 @@ impl<'a, C: PixelColor, M: Clone> Widget<C, M> for Element<'a, C, M> {
 
     fn mark_pressed(&mut self, point: Point) {
         self.inner.mark_pressed(point);
+    }
+
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.inner.widget_id()
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.inner.is_focusable()
+    }
+
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        self.inner.collect_focusable(out);
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.inner.sync_focus(focused);
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        self.inner.handle_action(action)
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        self.inner.route_action(target, action)
+    }
+
+    fn navigate_focus(&self, target: WidgetId, action: UiAction) -> Option<WidgetId> {
+        self.inner.navigate_focus(target, action)
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        self.inner.focus_rect(target)
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.inner.focus_at(point)
     }
 
     fn draw<'t>(

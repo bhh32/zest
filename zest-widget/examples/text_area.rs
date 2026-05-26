@@ -22,6 +22,7 @@ use zest::zest_theme::theme::dark;
 
 /// Maximum buffer length, to keep the demo bounded.
 const MAX_LEN: usize = 512;
+const TEXT_AREA_ID: WidgetId = WidgetId::new(0x710);
 
 #[derive(Clone)]
 enum Msg {
@@ -29,6 +30,8 @@ enum Msg {
     Key(KeyAction),
     /// A tap inside the TextArea repositioned the cursor (char index).
     Move(usize),
+    /// A semantic action routed to the focused editor.
+    EditorAction(UiAction),
 }
 
 struct Screen {
@@ -93,12 +96,14 @@ impl ScreenView<Rgb565, Msg> for Screen {
 
     fn view(&self) -> Element<'_, Rgb565, Msg> {
         let editor = TextArea::new(self.text.clone())
+            .id(TEXT_AREA_ID)
             .cursor(self.cursor)
             .font(self.theme.typography.body)
             .placeholder("Start typing…")
             .color(self.theme.background.on_base)
             .cursor_color(self.theme.accent.base)
             .on_tap(Msg::Move)
+            .on_action(Msg::EditorAction)
             .width(Length::Fill)
             .height(Length::Fill);
 
@@ -152,6 +157,16 @@ impl Application for App {
             Msg::Move(index) => {
                 s.cursor = index.min(s.text.chars().count());
             }
+            Msg::EditorAction(action) => match action {
+                UiAction::NavigateLeft | UiAction::Decrement => {
+                    s.cursor = s.cursor.saturating_sub(1);
+                }
+                UiAction::NavigateRight | UiAction::Increment => {
+                    s.cursor = (s.cursor + 1).min(s.text.chars().count());
+                }
+                UiAction::Activate => s.insert('\n'),
+                _ => {}
+            },
             Msg::Key(action) => match action {
                 // Uppercase is its own keymap, so the char arrives already
                 // cased — no host-side shift handling needed.

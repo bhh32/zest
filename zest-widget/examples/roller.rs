@@ -32,12 +32,14 @@ const OPTIONS: &[&str] = &[
     "December",
 ];
 const ITEM_HEIGHT: u32 = 36;
+const ROLLER_ID: WidgetId = WidgetId::new(0x720);
 
 #[derive(Clone)]
 enum Msg {
     Selected(usize),
     Scroll(ScrollMsg),
     ScrollTick,
+    Action(UiAction),
 }
 
 struct Screen {
@@ -58,6 +60,15 @@ impl Screen {
             selected: 0,
         }
     }
+
+    fn set_selected(&mut self, index: usize) {
+        self.selected = index.min(OPTIONS.len().saturating_sub(1));
+        self.scroll.offset = self
+            .scroll
+            .clamp_offset(Point::new(0, self.selected as i32 * ITEM_HEIGHT as i32));
+        self.scroll.phase = GesturePhase::Idle;
+        self.scroll.velocity = (0.0, 0.0);
+    }
 }
 
 impl ScreenView<Rgb565, Msg> for Screen {
@@ -77,12 +88,14 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .color(self.theme.background.on_base);
 
         let roller = Roller::new()
+            .id(ROLLER_ID)
             .options(OPTIONS)
             .item_height(ITEM_HEIGHT)
             .visible_count(5)
             .selected(self.selected)
             .scroll_state(&self.scroll)
             .on_select(Msg::Selected)
+            .on_action(Msg::Action)
             .on_scroll(Msg::Scroll);
 
         Column::new()
@@ -116,6 +129,19 @@ impl Application for App {
         match m {
             Msg::Selected(i) => {
                 self.screen.selected = i;
+                Task::none()
+            }
+            Msg::Action(action) => {
+                let next = match action {
+                    UiAction::Increment | UiAction::NavigateDown => {
+                        (self.screen.selected + 1).min(OPTIONS.len().saturating_sub(1))
+                    }
+                    UiAction::Decrement | UiAction::NavigateUp => {
+                        self.screen.selected.saturating_sub(1)
+                    }
+                    _ => self.screen.selected,
+                };
+                self.screen.set_selected(next);
                 Task::none()
             }
             Msg::Scroll(sm) => {

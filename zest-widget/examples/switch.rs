@@ -9,6 +9,9 @@ use core::fmt::Write as _;
 use zest::prelude::*;
 use zest::zest_theme::theme::dark;
 
+const LIGHTS_ID: WidgetId = WidgetId::new(0x630);
+const FAN_ID: WidgetId = WidgetId::new(0x631);
+
 #[derive(Clone)]
 enum Msg {
     SetLights(bool),
@@ -74,12 +77,20 @@ impl ScreenView<Rgb565, Msg> for Screen {
             )
             .push(horizontal_divider())
             .push(
-                self.labelled("Lights", Switch::new(self.lights).on_toggle(Msg::SetLights))
-                    .height(Length::Fixed(28)),
+                self.labelled(
+                    "Lights",
+                    Switch::new(self.lights)
+                        .id(LIGHTS_ID)
+                        .on_toggle(Msg::SetLights),
+                )
+                .height(Length::Fixed(28)),
             )
             .push(
-                self.labelled("Fan", Switch::new(self.fan).on_toggle(Msg::SetFan))
-                    .height(Length::Fixed(28)),
+                self.labelled(
+                    "Fan",
+                    Switch::new(self.fan).id(FAN_ID).on_toggle(Msg::SetFan),
+                )
+                .height(Length::Fixed(28)),
             )
             .push(horizontal_divider())
             .push(

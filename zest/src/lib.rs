@@ -57,9 +57,10 @@ pub mod net;
 /// to depend on `embedded-graphics` directly.
 pub mod prelude {
     pub use zest_core::{
-        Application, Constraints, DrawTargetRenderer, Horizontal, InputEvent, Length, Platform,
-        Recipe, RenderError, Renderer, Runtime, ScreenView, Subscription, Task, TickResult,
-        TouchEvent, TouchPhase, Vertical,
+        Application, ButtonState, Constraints, DirtyRegion, DrawTargetRenderer, FocusDirection,
+        FocusState, GesturePhase, Horizontal, InputEvent, Key, KeyEvent, Length, Platform,
+        PlatformCapabilities, Recipe, RenderError, Renderer, Runtime, ScreenView, Subscription,
+        Task, TickResult, TouchEvent, TouchPhase, UiAction, Vertical, WidgetId,
     };
     pub use zest_theme::{
         ButtonAppearance, ButtonCatalog, ButtonClass, Component, CornerRadii, FONT_ZEST_MONO,

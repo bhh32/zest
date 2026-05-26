@@ -37,7 +37,10 @@ use core::marker::PhantomData;
 use embedded_graphics::{
     pixelcolor::PixelColor, prelude::*, primitives::Rectangle, text::Alignment,
 };
-use zest_core::{Constraints, Horizontal, Length, RenderError, Renderer, TouchPhase, Vertical};
+use zest_core::{
+    Constraints, Horizontal, Length, RenderError, Renderer, TouchPhase, UiAction, Vertical,
+    WidgetId,
+};
 use zest_theme::Theme;
 
 /// Default height of the field and of each option row, in pixels.
@@ -54,6 +57,7 @@ pub struct Dropdown<'a, C: PixelColor, M: Clone> {
     selected: usize,
     is_open: bool,
     placeholder: String,
+    id: Option<WidgetId>,
     on_toggle: Option<Box<dyn Fn(bool) -> M + 'a>>,
     on_select: Option<Box<dyn Fn(usize) -> M + 'a>>,
     width: Length,
@@ -75,6 +79,7 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
             selected: 0,
             is_open: false,
             placeholder: String::new(),
+            id: None,
             on_toggle: None,
             on_select: None,
             width: Length::Fill,
@@ -130,6 +135,14 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         self
     }
 
+    /// Set a stable base id so the field and option rows can participate in
+    /// focus traversal.
+    #[must_use]
+    pub fn id(mut self, id: WidgetId) -> Self {
+        self.id = Some(id);
+        self
+    }
+
     /// Callback invoked when the field is tapped, receiving the
     /// negated open flag. Without it the field does not toggle.
     #[must_use]
@@ -159,9 +172,11 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
 
         let field = DropdownField {
             rect: Rectangle::zero(),
+            id: self.id,
             label,
             open: self.is_open,
             on_toggle: self.on_toggle.take(),
+            focused: false,
             pressed: false,
             width: self.width,
             height: self.height,
@@ -176,9 +191,11 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
         if self.is_open && !self.options.is_empty() {
             let list = DropdownList {
                 rect: Rectangle::zero(),
+                base_id: self.id,
                 options: self.options.clone(),
                 selected: self.selected,
                 on_select: self.on_select.take(),
+                focused: None,
                 pressed: None,
                 _color: PhantomData,
             };
@@ -244,15 +261,57 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Dropdown<'a, C, M> 
     }
 
     fn handle_touch(&mut self, point: Point, phase: TouchPhase) -> Option<M> {
+        self.ensure_built();
         self.stack
             .as_mut()
             .and_then(|s| s.handle_touch(point, phase))
     }
 
     fn mark_pressed(&mut self, point: Point) {
+        self.ensure_built();
         if let Some(stack) = self.stack.as_mut() {
             stack.mark_pressed(point);
         }
+    }
+
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        if let Some(id) = self.id
+            && self.on_toggle.is_some()
+        {
+            out.push(id);
+        }
+
+        if self.is_open && self.on_select.is_some() {
+            for index in 0..self.options.len() {
+                if let Some(id) = self.row_id(index) {
+                    out.push(id);
+                }
+            }
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.ensure_built();
+        if let Some(stack) = self.stack.as_mut() {
+            stack.sync_focus(focused);
+        }
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        self.ensure_built();
+        self.stack
+            .as_mut()
+            .and_then(|stack| stack.route_action(target, action))
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        self.stack
+            .as_ref()
+            .and_then(|stack| stack.focus_rect(target))
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.stack.as_ref().and_then(|stack| stack.focus_at(point))
     }
 
     fn draw<'t>(
@@ -267,15 +326,24 @@ impl<'a, C: PixelColor + 'a, M: Clone + 'a> Widget<C, M> for Dropdown<'a, C, M> 
     }
 }
 
+impl<'a, C: PixelColor + 'a, M: Clone + 'a> Dropdown<'a, C, M> {
+    fn row_id(&self, index: usize) -> Option<WidgetId> {
+        self.id
+            .map(|id| WidgetId::new(id.raw().wrapping_add(index as u64 + 1)))
+    }
+}
+
 // ---- internal: the bottom-layer field --------------------------------------
 
 /// The always-present field: a button-like rect showing the current
 /// selection plus a caret. Emits the toggle callback on tap.
 struct DropdownField<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
+    id: Option<WidgetId>,
     label: String,
     open: bool,
     on_toggle: Option<Box<dyn Fn(bool) -> M + 'a>>,
+    focused: bool,
     pressed: bool,
     width: Length,
     height: Length,
@@ -342,6 +410,41 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownField<'_, C, M> {
         }
     }
 
+    fn widget_id(&self) -> Option<WidgetId> {
+        self.id
+    }
+
+    fn is_focusable(&self) -> bool {
+        self.id.is_some() && self.on_toggle.is_some()
+    }
+
+    fn handle_action(&mut self, action: UiAction) -> Option<M> {
+        match action {
+            UiAction::Activate => self.on_toggle.as_ref().map(|cb| cb(!self.open)),
+            _ => None,
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = self.id.is_some() && self.id == focused;
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        if self.is_focusable() && self.hit_test(point) {
+            self.id
+        } else {
+            None
+        }
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        if self.id == Some(target) {
+            Some(self.rect)
+        } else {
+            None
+        }
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -353,8 +456,13 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownField<'_, C, M> {
         } else {
             comp.base
         };
+        let border = if self.focused {
+            theme.accent.base
+        } else {
+            comp.border
+        };
         renderer.fill_rect(self.rect, bg)?;
-        renderer.stroke_rect(self.rect, comp.border)?;
+        renderer.stroke_rect(self.rect, border)?;
 
         let font = theme.default_font();
         let text_y = self.rect.top_left.y
@@ -421,9 +529,11 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownField<'_, C, M> {
 /// row highlighted, each row emitting the select callback on tap.
 struct DropdownList<'a, C: PixelColor, M: Clone> {
     rect: Rectangle,
+    base_id: Option<WidgetId>,
     options: Vec<String>,
     selected: usize,
     on_select: Option<Box<dyn Fn(usize) -> M + 'a>>,
+    focused: Option<usize>,
     /// Index of the row currently held down (for pressed feedback).
     pressed: Option<usize>,
     _color: PhantomData<C>,
@@ -446,6 +556,11 @@ impl<C: PixelColor, M: Clone> DropdownList<'_, C, M> {
         }
         let idx = (dy as u32 / ROW_HEIGHT) as usize;
         (idx < self.options.len()).then_some(idx)
+    }
+
+    fn row_id(&self, index: usize) -> Option<WidgetId> {
+        self.base_id
+            .map(|id| WidgetId::new(id.raw().wrapping_add(index as u64 + 1)))
     }
 }
 
@@ -497,6 +612,47 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownList<'_, C, M> {
         }
     }
 
+    fn collect_focusable(&self, out: &mut Vec<WidgetId>) {
+        if self.on_select.is_none() {
+            return;
+        }
+        for index in 0..self.options.len() {
+            if let Some(id) = self.row_id(index) {
+                out.push(id);
+            }
+        }
+    }
+
+    fn sync_focus(&mut self, focused: Option<WidgetId>) {
+        self.focused = focused.and_then(|target| {
+            (0..self.options.len()).find(|index| self.row_id(*index) == Some(target))
+        });
+    }
+
+    fn route_action(&mut self, target: WidgetId, action: UiAction) -> Option<M> {
+        let index = (0..self.options.len()).find(|index| self.row_id(*index) == Some(target))?;
+        match action {
+            UiAction::Activate => self.on_select.as_ref().map(|cb| cb(index)),
+            _ => None,
+        }
+    }
+
+    fn focus_at(&self, point: Point) -> Option<WidgetId> {
+        self.row_at(point).and_then(|index| self.row_id(index))
+    }
+
+    fn focus_rect(&self, target: WidgetId) -> Option<Rectangle> {
+        let index =
+            (0..self.options.len()).find(|candidate| self.row_id(*candidate) == Some(target))?;
+        Some(Rectangle::new(
+            Point::new(
+                self.rect.top_left.x,
+                self.rect.top_left.y + index as i32 * ROW_HEIGHT as i32,
+            ),
+            Size::new(self.rect.size.width, ROW_HEIGHT),
+        ))
+    }
+
     fn draw<'t>(
         &self,
         renderer: &mut dyn Renderer<C>,
@@ -515,11 +671,18 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownList<'_, C, M> {
 
             let highlighted = self.pressed == Some(i);
             let selected = i == self.selected;
+            let focused = self.focused == Some(i);
             if highlighted {
                 renderer.fill_rect(row_rect, theme.accent.pressed)?;
             } else if selected {
                 renderer.fill_rect(row_rect, theme.accent.base)?;
             }
+            let border = if focused {
+                theme.accent.base
+            } else {
+                theme.button.border
+            };
+            renderer.stroke_rect(row_rect, border)?;
 
             let text_color = if highlighted || selected {
                 theme.accent.on_base
@@ -534,9 +697,7 @@ impl<C: PixelColor, M: Clone> Widget<C, M> for DropdownList<'_, C, M> {
                 text_color,
                 Alignment::Left,
             )?;
-
-            // Separator between rows (skip after the last).
-            if i + 1 < self.options.len() {
+            if i + 1 < self.options.len() && !focused {
                 let sep_y = y + ROW_HEIGHT as i32 - 1;
                 renderer.fill_rect(
                     Rectangle::new(Point::new(x, sep_y), Size::new(w, 1)),

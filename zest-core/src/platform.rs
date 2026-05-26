@@ -6,6 +6,7 @@
 //! (`embassy-executor`, `smol`, `tokio`, `pollster::block_on`) drives
 //! the resulting outer future.
 
+use crate::dirty::{DirtyRegion, PlatformCapabilities};
 use crate::event::InputEvent;
 use crate::renderer::{RenderError, Renderer};
 use embedded_graphics::{pixelcolor::PixelColor, prelude::*};
@@ -35,6 +36,25 @@ pub trait Platform {
     where
         F: FnOnce(&mut dyn Renderer<Self::Color>) -> Result<(), RenderError>;
 
+    /// Render a frame with a known dirty region.
+    #[allow(async_fn_in_trait)]
+    async fn render_with_dirty<F>(
+        &mut self,
+        dirty: &DirtyRegion,
+        draw: F,
+    ) -> Result<(), Self::Error>
+    where
+        F: FnOnce(&mut dyn Renderer<Self::Color>) -> Result<(), RenderError>,
+    {
+        let _ = dirty;
+        self.render_with(draw).await
+    }
+
     /// Viewport size in pixels.
     fn viewport(&self) -> Size;
+
+    /// Rendering and input capabilities of this backend.
+    fn capabilities(&self) -> PlatformCapabilities {
+        PlatformCapabilities::default()
+    }
 }

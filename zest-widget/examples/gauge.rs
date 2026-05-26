@@ -1,5 +1,5 @@
-//! Scale widget demo: a linear ruler stacked over a circular gauge,
-//! with the gauge overlaid by an Arc to show a live value.
+//! Gauge demo: a live circular gauge paired with a matching linear ruler,
+//! with the gauge overlaid by a live value arc and centered readout.
 
 extern crate alloc;
 use alloc::format;
@@ -27,7 +27,7 @@ impl Screen {
 
 impl ScreenView<Rgb565, Msg> for Screen {
     fn name(&self) -> &'static str {
-        "Scale"
+        "Gauge"
     }
 
     fn theme(&self) -> &Theme<'_, Rgb565> {
@@ -38,7 +38,9 @@ impl ScreenView<Rgb565, Msg> for Screen {
         let ruler: Scale<'_, Rgb565, Msg> = Scale::new(0.0, 100.0)
             .mode(ScaleMode::Linear)
             .major_ticks(5)
-            .minor_per_major(4);
+            .minor_per_major(4)
+            .value_marker(self.value)
+            .marker_color(self.theme.accent.base);
 
         // A circular gauge scale (ticks + labels) over a 270° sweep.
         let gauge_scale: Scale<'_, Rgb565, Msg> = Scale::new(0.0, 100.0)
@@ -48,11 +50,23 @@ impl ScreenView<Rgb565, Msg> for Screen {
             .start_deg(225)
             .sweep_deg(-270);
 
-        let readout = Text::new(format!("value: {:.0}", self.value))
+        let gauge_arc: Arc<'_, Rgb565, Msg> = Arc::new(self.value, 0.0, 100.0)
+            .width_px(8)
+            .track_color(self.theme.background.divider)
+            .value_color(self.theme.accent.base);
+
+        let readout = Text::new(format!("{:.0}", self.value))
             .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
             .font(self.theme.typography.body)
             .color(self.theme.accent.base)
             .height(Length::Fixed(18));
+
+        let gauge = Stack::new()
+            .height(Length::Fixed(140))
+            .push(gauge_scale)
+            .push(gauge_arc)
+            .push(readout);
 
         let buttons = Row::new()
             .spacing(6)
@@ -67,8 +81,7 @@ impl ScreenView<Rgb565, Msg> for Screen {
         Column::new()
             .spacing(6)
             .push(Container::new().height(Length::Fixed(48)).child(ruler))
-            .push(gauge_scale)
-            .push(readout)
+            .push(gauge)
             .push(buttons)
             .into_element()
     }
@@ -108,5 +121,5 @@ impl Application for App {
 
 #[embassy_executor::main]
 async fn main(_spawner: embassy_executor::Spawner) {
-    zest::run::<App>("zest - Scale").await;
+    zest::run::<App>("zest - Gauge").await;
 }
