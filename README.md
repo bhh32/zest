@@ -139,13 +139,23 @@ The dirty-region model is intentionally small right now. It is enough to support
 | Rendering | Dirty-region aware | full redraw still works everywhere; clipped redraw and partial flush are now part of the core model |
 | Simulator | Strong local tool | keyboard input, encoder-like wheel input, partial redraw, and optional dirty-region visualization |
 | Widget catalog | Broad | 43 runnable examples and a large widget surface |
-| Theme system | Useful, still uneven | good structure, but some preset themes still fall back to `dark` |
+| Theme system | Broad preset coverage | 19 preset theme modules are exported, plus a custom builder for project-specific palettes |
 
 ## Theme presets
 
-Fully implemented: `light`, `dark`, `dracula`, `dracula_at_night`, `nord`, and `tokyo_night`.
+`zest-theme::theme` currently exports these preset modules:
 
-The remaining preset modules are present but still fall back to `dark` until their palettes are filled in from the original sources: `catppuccin_latte`, `catppuccin_frappe`, `catppuccin_macchiato`, `catppuccin_mocha`, `tokyo_night_storm`, `tokyo_night_light`, `kanagawa_wave`, `kanagawa_dragon`, `kanagawa_lotus`, `moonfly`, `nightfly`, `oxocarbon`, and `ferra`.
+- `light`, `dark`
+- `dracula`, `dracula_at_night`
+- `nord`
+- `catppuccin_latte`, `catppuccin_frappe`, `catppuccin_macchiato`, `catppuccin_mocha`
+- `tokyo_night`, `tokyo_night_storm`, `tokyo_night_light`
+- `kanagawa_wave`, `kanagawa_dragon`, `kanagawa_lotus`
+- `moonfly`, `nightfly`
+- `oxocarbon`
+- `ferra`
+
+Each preset module exposes a `THEME` constant as `Theme<'static, Rgb888>`. Use `convert_theme(...)` to convert it to the color type your target uses.
 
 For custom palettes, use `theme::custom::CustomBuilder`.
 
