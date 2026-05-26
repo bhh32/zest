@@ -1,6 +1,7 @@
 [package]
-name = "zest"
+name = "zest-gui"
 description = "Retained-mode GUI framework for embedded touchscreen MCUs. Re-exports zest-core, zest-theme, and zest-widget; optional simulator default platform."
+documentation = "https://docs.rs/zest-gui"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

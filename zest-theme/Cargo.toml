@@ -1,6 +1,7 @@
 [package]
 name = "zest-theme"
 description = "Theme types for zest, following libcosmic's grouped Container/Component/Palette structure."
+documentation = "https://docs.rs/zest-theme"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

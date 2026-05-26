@@ -2368,7 +2368,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "zest"
+name = "zest-core"
+version = "0.1.0"
+dependencies = [
+ "embassy-futures",
+ "embassy-sync",
+ "embassy-time",
+ "embedded-graphics",
+ "embedded-graphics-core",
+ "zest-theme",
+]
+
+[[package]]
+name = "zest-gui"
 version = "0.1.0"
 dependencies = [
  "embassy-time",
@@ -2379,18 +2391,6 @@ dependencies = [
  "zest-simulator",
  "zest-theme",
  "zest-widget",
-]
-
-[[package]]
-name = "zest-core"
-version = "0.1.0"
-dependencies = [
- "embassy-futures",
- "embassy-sync",
- "embassy-time",
- "embedded-graphics",
- "embedded-graphics-core",
- "zest-theme",
 ]
 
 [[package]]
@@ -2426,8 +2426,8 @@ dependencies = [
  "rand 0.10.1",
  "rand_chacha 0.10.0",
  "serde",
- "zest",
  "zest-core",
+ "zest-gui",
  "zest-theme",
 ]
 
