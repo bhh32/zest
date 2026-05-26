@@ -1,0 +1,26 @@
+name: Publish crates
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run checks
+        run: bash scripts/ci.sh
+
+      - name: Publish crates
+        run: bash scripts/publish.sh
